@@ -37,6 +37,7 @@ public class LavaAudioPlayer extends AudioSourceBase {
 
     public void stopAudioPlayer() {
         this.audioPlayer.stopTrack();
+        this.isRunning = false;
     }
 
     public boolean isRunning() {
