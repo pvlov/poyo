@@ -1,7 +1,8 @@
 package org.pvlov;
 
-import java.util.Optional;
-
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.audio.AudioConnection;
@@ -18,9 +19,7 @@ import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberJo
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLeaveListener;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
-import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import java.util.Optional;
 
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
         SlashCommandCreateListener {
@@ -41,9 +40,6 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         this.api = new DiscordApiBuilder().setToken(token).login().join();
         this.playerManager = new DefaultAudioPlayerManager();
         this.queue = Utils.buildQueue(this.playerManager, api);
-        SlashCommand.with("volume", "Adjust the Volume between 0 and 100")
-                .addOption(SlashCommandOption.createLongOption("volume", "the new volume value", true))
-                .createGlobal(api).join();
 
         api.addServerVoiceChannelMemberJoinListener(this);
         api.addServerVoiceChannelMemberLeaveListener(this);
@@ -53,19 +49,21 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
     @Override
     public void onServerVoiceChannelMemberJoin(ServerVoiceChannelMemberJoinEvent event) {
-        for (ServerVoiceChannel voiceChannel : event.getServer().getVoiceChannels()) {
-            if (voiceChannel.getConnectedUsers().stream().anyMatch(user -> user.getId() == ENRICO_ID)) {
-                voiceChannel.connect().thenAccept(audioConnection -> {
-                    currConnection = audioConnection;
-                    queue.registerAudioDestination(audioConnection);
-
-                    derPate.ifPresent(audioTrack -> queue.playNow(audioTrack.makeClone()));
-                }).exceptionally(throwable -> {
-                    throwable.printStackTrace();
-                    return null;
-                });
-            }
+        // For now, ignore all Non-Enrico joins
+        if (event.getUser().getId() != ENRICO_ID) {
+            return;
         }
+        event.getChannel().connect().thenAccept(audioConnection -> {
+            //Only update connection if the Voice Channel has changed, unneded reconnection makes the bot leave and then rejoin the same channel
+            if (!currConnection.getChannel().equals(audioConnection)) {
+                currConnection = audioConnection;
+                queue.registerAudioDestination(audioConnection);
+            }
+            derPate.ifPresent(audioTrack -> queue.playNow(audioTrack.makeClone()));
+        }).exceptionally(throwable -> {
+            throwable.printStackTrace();
+            return null;
+        });
     }
 
     @Override
@@ -85,77 +83,54 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         var args = interaction.getArguments();
 
         if (interaction.getCommandName().equals("ping")) {
-            interaction.createImmediateResponder()
-                    .setContent("Pong!")
-                    .setFlags(MessageFlag.EPHEMERAL)
-                    .respond();
+            Utils.sendQuickEphemeralResponse(interaction, "Pong!");
         } else if (interaction.getCommandName().equals("play")) {
             String link = args.get(0).getStringValue().orElse(NEVER_GONNA_GIVE_YOU_UP);
 
             if (queue.isRunning()) {
                 playerManager.loadItem(link, queue);
-                interaction.createImmediateResponder()
-                        .setContent("Track successfully added to Queue! :D")
-                        .setFlags(MessageFlag.EPHEMERAL)
-                        .respond();
+                Utils.sendQuickEphemeralResponse(interaction, "Track successfully added to Queue! :D");
                 return;
             }
 
-            interaction.createImmediateResponder()
-                    .addEmbed(
-                            new EmbedBuilder()
-                                    .setAuthor(interaction.getUser())
-                                    .addField("Playing: ", link))
-                    .respond();
-            var voiceChannels = interaction.getUser().getConnectedVoiceChannels();
-            ServerVoiceChannel targetVoiceChannel = null;
+            Utils.sendQuickEphemeralResponse(interaction, new EmbedBuilder()
+                    .setAuthor(interaction.getUser())
+                    .addField("Playing: ", link));
 
-            for (var voiceChannel : voiceChannels) {
-                if (!interaction.getUser().isConnected(voiceChannel)) {
-                    continue;
-                }
-                targetVoiceChannel = voiceChannel;
-            }
+            interaction.getUser().getConnectedVoiceChannels().stream()
+                    .filter(serverVoiceChannel -> serverVoiceChannel.isConnected(interaction.getUser()))
+                    .findFirst().ifPresentOrElse(
+                            targetVoiceChannel -> {
+                                targetVoiceChannel.connect().thenAccept(audioConnection -> {
+                                    queue.registerAudioDestination(audioConnection);
+                                    playerManager.loadItem(link, queue);
+                                });
+                            },
+                            () -> {
+                                Utils.sendQuickEphemeralResponse(interaction, "You need to be in a Voice-Channel to use the /play command");
+                            }
+                    );
 
-            if (targetVoiceChannel == null) {
-                interaction.createImmediateResponder()
-                        .setContent("You need to be in a Voice-Channel to use the /play command")
-                        .setFlags(MessageFlag.EPHEMERAL)
-                        .respond();
-                return;
-            }
-
-            targetVoiceChannel.connect().thenAccept(audioConnection -> {
-                queue.registerAudioDestination(audioConnection);
-                playerManager.loadItem(link, queue);
-            });
         } else if (interaction.getCommandName().equals("skip")) {
             if (!queue.isRunning()) {
-                interaction.createImmediateResponder()
-                        .setContent("The Bot is not playing Music, skip ignored")
-                        .setFlags(MessageFlag.EPHEMERAL)
-                        .respond();
+                Utils.sendQuickEphemeralResponse(interaction, "The Bot is not playing Music, skip ignored");
                 return;
             }
-            interaction.createImmediateResponder()
-                    .setContent("Skipped Track!")
-                    .setFlags(MessageFlag.EPHEMERAL)
-                    .respond();
+            Utils.sendQuickEphemeralResponse(interaction, "Skipped Track!");
             queue.skip();
+
         } else if (interaction.getCommandName().equals("playlist")) {
             var embedBuilder = new EmbedBuilder();
 
+            // why not let it be a simple for loop?
             AudioTrack curr = null;
             int counter = 0;
             for (var it = queue.iter(); it.hasNext(); curr = it.next()) {
                 embedBuilder.addField(String.valueOf(counter + 1), curr.getInfo().title, true);
                 counter++;
             }
+            Utils.sendQuickEphemeralResponse(interaction, embedBuilder);
 
-            interaction.createImmediateResponder()
-                    .addEmbed(embedBuilder)
-                    .setFlags(MessageFlag.EPHEMERAL)
-                    .respond();
         } else if (interaction.getCommandName().equals("stop")) {
             queue.clear();
             interaction.getServer().get().getVoiceChannels().stream()

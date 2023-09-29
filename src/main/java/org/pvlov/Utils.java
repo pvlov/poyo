@@ -9,8 +9,24 @@ import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import org.javacord.api.entity.message.MessageFlag;
+import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.interaction.SlashCommandInteraction;
 
 public class Utils {
+
+    public static void sendQuickEphemeralResponse(SlashCommandInteraction interaction, String response) {
+        interaction.createImmediateResponder()
+                .setContent(response)
+                .setFlags(MessageFlag.EPHEMERAL)
+                .respond();
+    }
+    public static void sendQuickEphemeralResponse(SlashCommandInteraction interaction, EmbedBuilder embed) {
+        interaction.createImmediateResponder()
+                .addEmbed(embed)
+                .setFlags(MessageFlag.EPHEMERAL)
+                .respond();
+    }
 
     public static AudioQueue buildQueue(AudioPlayerManager playerManager, DiscordApi api) {
         AudioSourceManagers.registerRemoteSources(playerManager);
