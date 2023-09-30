@@ -27,7 +27,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         SlashCommandCreateListener {
     private static final String BOT_NAME = "Poyo";
     private static final String NEVER_GONNA_GIVE_YOU_UP = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-    private static final String DERPATE = "https://www.youtube.com/watch?v=HWqKPWO5T4o";
+    private static final String DERPATE = "https://www.youtube.com/watch?v=Z1LUj7_8xiI";
 
     private final long PATE_ID;
 
