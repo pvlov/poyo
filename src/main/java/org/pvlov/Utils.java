@@ -28,7 +28,7 @@ public class Utils {
 
     public static SlashCommand parseCommandName(String commandName) {
         try {
-            SlashCommand.valueOf(commandName.toUpperCase());
+            return SlashCommand.valueOf(commandName.toUpperCase());
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
         }

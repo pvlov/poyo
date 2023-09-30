@@ -124,7 +124,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 var embedBuilder = new EmbedBuilder();
 
                 // why not let it be a simple for loop?
-                // get() should still be O(1), since it's based on Array
+                // get() should still be O(1), since it's based on an Array
                 AudioTrack curr = null;
                 int counter = 0;
                 for (var it = queue.iter(); it.hasNext(); curr = it.next()) {
@@ -155,9 +155,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 queue.setVolume((int) arg);
             }
 
-            case UNEXPECTED -> {
-                Utils.sendQuickEphemeralResponse(interaction, "Something unexpected happened!");
-            }
+            case UNEXPECTED -> Utils.sendQuickEphemeralResponse(interaction, "Something unexpected happened!");
         }
     }
 }
