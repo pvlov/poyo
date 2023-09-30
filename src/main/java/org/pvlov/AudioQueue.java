@@ -20,7 +20,8 @@ import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 
-public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHandler, Iterable<Pair<Integer, AudioTrack>> {
+public class AudioQueue extends AudioEventAdapter
+        implements AudioLoadResultHandler, Iterable<Pair<Integer, AudioTrack>> {
     private final Deque<AudioTrack> audioQueue;
     private final LavaAudioPlayer audioPlayer;
 

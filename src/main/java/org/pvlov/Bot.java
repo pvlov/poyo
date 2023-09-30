@@ -14,14 +14,20 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberJoinEvent;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberLeaveEvent;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
+import org.javacord.api.interaction.SlashCommandBuilder;
 import org.javacord.api.interaction.SlashCommandInteraction;
+import org.javacord.api.interaction.SlashCommandOptionBuilder;
+import org.javacord.api.interaction.SlashCommandOptionType;
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberJoinListener;
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLeaveListener;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 import org.javatuples.Pair;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -55,6 +61,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         this.audioCache = new Cache(playerManager);
         this.VIPs = new ArrayList<>();
 
+        createSlashCommands();
         api.addServerVoiceChannelMemberJoinListener(this);
         api.addServerVoiceChannelMemberLeaveListener(this);
         api.addSlashCommandCreateListener(this);
@@ -87,6 +94,26 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         }
 
         api.updateActivity(ActivityType.WATCHING, "the one and only.");
+    }
+
+    private void createSlashCommands() {
+        Set<SlashCommandBuilder> builders = new HashSet<>();
+        builders.add(new SlashCommandBuilder().setName("ping").setDescription("For testing purposes."));
+        builders.add(new SlashCommandBuilder()
+                .setName("play").addOption(new SlashCommandOptionBuilder().setRequired(true)
+                        .setType(SlashCommandOptionType.STRING).setName("link").setDescription("The link to the song.")
+                        .build())
+                .setDescription("Play a song."));
+        builders.add(new SlashCommandBuilder().setName("skip").setDescription("Skip the current song."));
+        builders.add(new SlashCommandBuilder().setName("playlist").setDescription("Print the current playlist."));
+        builders.add(new SlashCommandBuilder().setName("stop").setDescription("Stop playing."));
+        builders.add(new SlashCommandBuilder()
+                .setName("volume").addOption(new SlashCommandOptionBuilder().setRequired(true)
+                        .setType(SlashCommandOptionType.LONG).setLongMinValue(0).setLongMaxValue(100).setName("value")
+                        .setDescription("The volume.")
+                        .build())
+                .setDescription("Set the volume of the bot."));
+        api.bulkOverwriteGlobalApplicationCommands(builders).join();
     }
 
     @Override
