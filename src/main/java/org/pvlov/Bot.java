@@ -3,7 +3,8 @@ package org.pvlov;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.audio.AudioConnection;
@@ -28,9 +29,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
         SlashCommandCreateListener {
 
@@ -41,16 +39,15 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
     public DiscordApi api;
 
-    private AudioPlayerManager playerManager;
-    private AudioQueue queue;
-    private Cache audioCache;
-    private List<Long> VIPs;
+    private final AudioPlayerManager playerManager;
+    private final AudioQueue queue;
+    private final Cache audioCache;
+    private final List<Long> VIPs;
 
     // TODO: Multiple connections at once
     private AudioConnection currConnection;
 
     public Bot() {
-
         this.api = new DiscordApiBuilder().setToken(Config.INSTANCE.getString("DISCORD_TOKEN").orElseGet(() -> {
             LOG.error("No DISCORD_TOKEN set. Abort.");
             return null;
@@ -117,6 +114,16 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                         .setDescription("The volume.")
                         .build())
                 .setDescription("Set the volume of the bot."));
+        builders.add(new SlashCommandBuilder()
+                .setName("jump").addOption(new SlashCommandOptionBuilder()
+                        .setRequired(true)
+                        .setType(SlashCommandOptionType.LONG)
+                        .setLongMinValue(1)
+                        .setName("index")
+                        .setDescription("the target index")
+                        .build()
+                )
+                .setDescription("Jump to a specific Song in the Playlist"));
         api.bulkOverwriteGlobalApplicationCommands(builders).join();
     }
 
@@ -227,7 +234,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 var embedBuilder = new EmbedBuilder();
 
                 for (Pair<Integer, AudioTrack> entry : queue) {
-                    embedBuilder.addField(String.valueOf(entry.getValue0()), entry.getValue1().getInfo().title, true);
+                    embedBuilder.addField(String.valueOf(entry.getValue0() + 1), entry.getValue1().getInfo().title, true);
                 }
                 Utils.sendQuickEphemeralResponse(interaction, embedBuilder);
             }
@@ -248,6 +255,24 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
                 Utils.sendQuickEphemeralResponse(interaction, "Adjusted Volume!");
                 queue.setVolume((int) arg);
+            }
+
+            case JUMP -> {
+
+                final long jumpTarget;
+                if (args.size() >= 1 && args.get(0).getLongValue().isPresent()) {
+                    jumpTarget = args.get(0).getLongValue().get();
+                } else {
+                    Utils.sendQuickEphemeralResponse(interaction, "Please only use a number as the target for the /jump command");
+                    return;
+                }
+                // Be aware that for easier use and compatibility with /playlist, jump will be 1-indexed
+                if (jumpTarget > queue.getSize()) {
+                    Utils.sendQuickEphemeralResponse(interaction, "Please make sure the index provided is in the bounds of the Queue size");
+                    return;
+                }
+                queue.skip(jumpTarget - 1);
+                Utils.sendQuickEphemeralResponse(interaction, "Jumped to Track " + jumpTarget + "!");
             }
 
             case UNEXPECTED -> Utils.sendQuickEphemeralResponse(interaction, "Something unexpected happened!");

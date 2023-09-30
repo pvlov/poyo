@@ -27,6 +27,8 @@ public class Utils {
         STOP,
         VOLUME,
 
+        JUMP,
+
         UNEXPECTED,
     }
 
