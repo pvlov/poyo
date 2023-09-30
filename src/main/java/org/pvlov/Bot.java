@@ -6,6 +6,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.audio.AudioConnection;
+import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
@@ -53,6 +54,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 api.getYourself().updateNickname(server, BOT_NAME);
             }
         }
+
+        api.updateActivity(ActivityType.WATCHING, "the one and only.");
     }
 
     @Override
