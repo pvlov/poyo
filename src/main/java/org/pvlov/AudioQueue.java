@@ -20,7 +20,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 
-public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHandler {
+public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHandler, Iterable<Pair<Integer, AudioTrack>> {
     private final Deque<AudioTrack> audioQueue;
     private final LavaAudioPlayer audioPlayer;
 
@@ -101,33 +101,6 @@ public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHand
         return this.audioQueue;
     }
 
-    public Iterable<Pair<Integer, AudioTrack>> enumerate() {
-
-        var iterator = this.audioQueue.iterator();
-
-        return new Iterable<Pair<Integer, AudioTrack>>() {
-
-            @Override
-            public Iterator<Pair<Integer, AudioTrack>> iterator() {
-
-                return new Iterator<Pair<Integer, AudioTrack>>() {
-                    private int counter = 0;
-                    private Iterator<AudioTrack> iter = iterator;
-
-                    @Override
-                    public boolean hasNext() {
-                        return iter.hasNext();
-                    }
-
-                    @Override
-                    public Pair<Integer, AudioTrack> next() {
-                        return new Pair<Integer, AudioTrack>(counter++, iter.next());
-                    }
-                };
-            }
-        };
-    }
-
     public void clear() {
         if (!audioQueue.isEmpty()) {
             if (audioPlayer.isRunning()) {
@@ -181,4 +154,21 @@ public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHand
         this.audioPlayer.playAudio(audioQueue.peek());
     }
 
+    @Override
+    public Iterator<Pair<Integer, AudioTrack>> iterator() {
+        return new Iterator<>() {
+            private int counter = 0;
+            private final Iterator<AudioTrack> iter = audioQueue.iterator();
+
+            @Override
+            public boolean hasNext() {
+                return iter.hasNext();
+            }
+
+            @Override
+            public Pair<Integer, AudioTrack> next() {
+                return new Pair<Integer, AudioTrack>(counter++, iter.next());
+            }
+        };
+    }
 }
