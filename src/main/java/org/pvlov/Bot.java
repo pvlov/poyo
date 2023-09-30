@@ -37,7 +37,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     public Bot(String token) {
         this.api = new DiscordApiBuilder().setToken(token).login().join();
         this.playerManager = new DefaultAudioPlayerManager();
-        this.queue = Utils.buildQueue(this.playerManager, api);
+        this.queue = AudioQueue.buildQueue(this.playerManager, api);
 
         api.addServerVoiceChannelMemberJoinListener(this);
         api.addServerVoiceChannelMemberLeaveListener(this);
@@ -54,11 +54,11 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         event.getChannel().connect().thenAccept(audioConnection -> {
             // Only update connection if the Voice Channel has changed, unneeded
             // reconnection makes the bot leave and then rejoin the same channel
-            if (!currConnection.getChannel().equals(audioConnection)) {
+            if (!currConnection.getChannel().equals(audioConnection.getChannel())) {
                 currConnection = audioConnection;
                 queue.registerAudioDestination(audioConnection);
             }
-            derPate.ifPresent(audioTrack -> queue.playNow(audioTrack.makeClone()));
+            derPate.ifPresent(audioTrack -> queue.playNow(audioTrack));
         }).exceptionally(throwable -> {
             throwable.printStackTrace();
             return null;
@@ -72,6 +72,9 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 currConnection.close().join();
                 queue.clear();
                 currConnection = null;
+
+                // Preload
+                derPate.ifPresent(audioTrack -> this.derPate = Optional.of(audioTrack.makeClone()));
             }
         }
     }

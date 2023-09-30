@@ -49,11 +49,6 @@ public class Utils {
                 .respond();
     }
 
-    public static AudioQueue buildQueue(AudioPlayerManager playerManager, DiscordApi api) {
-        AudioSourceManagers.registerRemoteSources(playerManager);
-        return new AudioQueue(new LavaAudioPlayer(api, playerManager.createPlayer()));
-    }
-
     public static Optional<AudioTrack> decodeTrack(AudioPlayerManager playerManager, String link) {
         FixWeirdResultHandler result = new FixWeirdResultHandler() {
 

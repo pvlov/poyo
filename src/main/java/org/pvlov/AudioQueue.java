@@ -4,12 +4,15 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
 
+import org.javacord.api.DiscordApi;
 import org.javacord.api.audio.AudioConnection;
 import org.javatuples.Pair;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
+import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
@@ -18,6 +21,11 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHandler {
     private final Deque<AudioTrack> audioQueue;
     private final LavaAudioPlayer audioPlayer;
+
+    public static AudioQueue buildQueue(AudioPlayerManager playerManager, DiscordApi api) {
+        AudioSourceManagers.registerRemoteSources(playerManager);
+        return new AudioQueue(new LavaAudioPlayer(api, playerManager.createPlayer()));
+    }
 
     public AudioQueue(LavaAudioPlayer audioPlayer) {
         this.audioQueue = new ArrayDeque<>();
