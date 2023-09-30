@@ -15,6 +15,26 @@ import org.javacord.api.interaction.SlashCommandInteraction;
 
 public class Utils {
 
+    public enum SlashCommand {
+        PING,
+        PLAY,
+        PLAYLIST,
+        SKIP,
+        STOP,
+        VOLUME,
+
+        UNEXPECTED,
+    }
+
+    public static SlashCommand parseCommandName(String commandName) {
+        try {
+            SlashCommand.valueOf(commandName.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        }
+        return SlashCommand.UNEXPECTED;
+    }
+
     public static void sendQuickEphemeralResponse(SlashCommandInteraction interaction, String response) {
         interaction.createImmediateResponder()
                 .setContent(response)

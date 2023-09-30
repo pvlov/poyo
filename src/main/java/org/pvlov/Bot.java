@@ -79,73 +79,85 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         SlashCommandInteraction interaction = event.getSlashCommandInteraction();
         var args = interaction.getArguments();
 
-        if (interaction.getCommandName().equals("ping")) {
-            Utils.sendQuickEphemeralResponse(interaction, "Pong!");
-        } else if (interaction.getCommandName().equals("play")) {
-            String link = args.get(0).getStringValue().orElse(NEVER_GONNA_GIVE_YOU_UP);
-
-            if (queue.isRunning()) {
-                playerManager.loadItem(link, queue);
-                Utils.sendQuickEphemeralResponse(interaction, "Track successfully added to Queue! :D");
-                return;
+        switch (Utils.parseCommandName(interaction.getCommandName())) {
+            case PING -> {
+                Utils.sendQuickEphemeralResponse(interaction, "Pong!");
             }
 
-            Utils.sendQuickEphemeralResponse(interaction, new EmbedBuilder()
-                    .setAuthor(interaction.getUser())
-                    .addField("Playing: ", link));
+            case PLAY -> {
+                String link = args.get(0).getStringValue().orElse(NEVER_GONNA_GIVE_YOU_UP);
 
-            interaction.getUser().getConnectedVoiceChannel(interaction.getServer().get())
-                    .ifPresentOrElse(
-                            targetVoiceChannel -> {
-                                targetVoiceChannel.connect().thenAccept(audioConnection -> {
-                                    queue.registerAudioDestination(audioConnection);
-                                    playerManager.loadItem(link, queue);
-                                });
-                            },
-                            () -> {
-                                Utils.sendQuickEphemeralResponse(interaction, "You need to be in a Voice-Channel to use the /play command");
-                            }
-                    );
+                if (queue.isRunning()) {
+                    playerManager.loadItem(link, queue);
+                    Utils.sendQuickEphemeralResponse(interaction, "Track successfully added to Queue! :D");
+                    return;
+                }
 
-        } else if (interaction.getCommandName().equals("skip")) {
-            if (!queue.isRunning()) {
-                Utils.sendQuickEphemeralResponse(interaction, "The Bot is not playing Music, skip ignored");
-                return;
+                Utils.sendQuickEphemeralResponse(interaction, new EmbedBuilder()
+                        .setAuthor(interaction.getUser())
+                        .addField("Playing: ", link));
+
+                interaction.getUser().getConnectedVoiceChannel(interaction.getServer().get())
+                        .ifPresentOrElse(
+                                targetVoiceChannel -> {
+                                    targetVoiceChannel.connect().thenAccept(audioConnection -> {
+                                        queue.registerAudioDestination(audioConnection);
+                                        playerManager.loadItem(link, queue);
+                                    });
+                                },
+                                () -> {
+                                    Utils.sendQuickEphemeralResponse(interaction, "You need to be in a Voice-Channel to use the /play command");
+                                }
+                        );
             }
-            Utils.sendQuickEphemeralResponse(interaction, "Skipped Track!");
-            queue.skip();
 
-        } else if (interaction.getCommandName().equals("playlist")) {
-            var embedBuilder = new EmbedBuilder();
-
-            // why not let it be a simple for loop?
-            // get() should still be O(1), since it's based on Array
-            AudioTrack curr = null;
-            int counter = 0;
-            for (var it = queue.iter(); it.hasNext(); curr = it.next()) {
-                embedBuilder.addField(String.valueOf(counter + 1), curr.getInfo().title, true);
-                counter++;
+            case SKIP -> {
+                if (!queue.isRunning()) {
+                    Utils.sendQuickEphemeralResponse(interaction, "The Bot is not playing Music, skip ignored");
+                    return;
+                }
+                Utils.sendQuickEphemeralResponse(interaction, "Skipped Track!");
+                queue.skip();
             }
-            Utils.sendQuickEphemeralResponse(interaction, embedBuilder);
 
-        } else if (interaction.getCommandName().equals("stop")) {
-            queue.clear();
-            api.getYourself().getConnectedVoiceChannel(interaction.getServer().get())
-                    .ifPresent(ServerVoiceChannel::disconnect);
+            case PLAYLIST -> {
+                var embedBuilder = new EmbedBuilder();
 
-        } else if (interaction.getCommandName().equals("volume")) {
-            if (!queue.isRunning()) {
-                Utils.sendQuickEphemeralResponse(interaction, "Bot is not currently playing!");
-                return;
+                // why not let it be a simple for loop?
+                // get() should still be O(1), since it's based on Array
+                AudioTrack curr = null;
+                int counter = 0;
+                for (var it = queue.iter(); it.hasNext(); curr = it.next()) {
+                    embedBuilder.addField(String.valueOf(counter + 1), curr.getInfo().title, true);
+                    counter++;
+                }
+                Utils.sendQuickEphemeralResponse(interaction, embedBuilder);
             }
-            long arg = interaction.getArguments().get(0).getLongValue().get();
 
-            if (arg < 0 || arg > 100) {
-                Utils.sendQuickEphemeralResponse(interaction, "Make sure to only specify a value between 0 and 100");
-                return;
+            case STOP -> {
+                queue.clear();
+                api.getYourself().getConnectedVoiceChannel(interaction.getServer().get())
+                        .ifPresent(ServerVoiceChannel::disconnect);
             }
-            Utils.sendQuickEphemeralResponse(interaction, "Adjusted Volume!");
-            queue.setVolume((int) arg);
+
+            case VOLUME -> {
+                if (!queue.isRunning()) {
+                    Utils.sendQuickEphemeralResponse(interaction, "Bot is not currently playing!");
+                    return;
+                }
+                long arg = interaction.getArguments().get(0).getLongValue().get();
+
+                if (arg < 0 || arg > 100) {
+                    Utils.sendQuickEphemeralResponse(interaction, "Make sure to only specify a value between 0 and 100");
+                    return;
+                }
+                Utils.sendQuickEphemeralResponse(interaction, "Adjusted Volume!");
+                queue.setVolume((int) arg);
+            }
+
+            case UNEXPECTED -> {
+                Utils.sendQuickEphemeralResponse(interaction, "Something unexpected happened!");
+            }
         }
     }
 }
