@@ -118,7 +118,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 .setName("jump").addOption(new SlashCommandOptionBuilder()
                         .setRequired(true)
                         .setType(SlashCommandOptionType.LONG)
-                        .setMinLength(1)
+                        .setLongMinValue(1)
                         .setName("index")
                         .setDescription("the target index")
                         .build()
