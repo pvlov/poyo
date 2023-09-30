@@ -16,6 +16,7 @@ import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberJo
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLeaveListener;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 
+import java.util.Iterator;
 import java.util.Optional;
 
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
@@ -123,13 +124,13 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             case PLAYLIST -> {
                 var embedBuilder = new EmbedBuilder();
 
-                // why not let it be a simple for loop?
-                // get() should still be O(1), since it's based on an Array
-                AudioTrack curr = null;
-                int counter = 0;
-                for (var it = queue.iter(); it.hasNext(); curr = it.next()) {
-                    embedBuilder.addField(String.valueOf(counter + 1), curr.getInfo().title, true);
-                    counter++;
+                int counter = 1;
+                for (AudioTrack track : queue.getAudioQueue()) {
+                    embedBuilder.addField(
+                            String.valueOf(counter++),
+                            track.getInfo().title,
+                            true
+                    );
                 }
                 Utils.sendQuickEphemeralResponse(interaction, embedBuilder);
             }

@@ -19,7 +19,7 @@ public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHand
     private final LavaAudioPlayer audioPlayer;
 
     public AudioQueue(LavaAudioPlayer audioPlayer) {
-        this.audioQueue = new ArrayDeque<AudioTrack>();
+        this.audioQueue = new ArrayDeque<>();
         this.audioPlayer = audioPlayer;
         this.audioPlayer.addListener(this);
     }
@@ -55,9 +55,8 @@ public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHand
         }
         audioPlayer.playAudio(audioQueue.peek());
     }
-
-    public Iterator<AudioTrack> iter() {
-        return audioQueue.iterator();
+    public Deque<AudioTrack> getAudioQueue() {
+        return this.audioQueue;
     }
 
     public void clear() {
