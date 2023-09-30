@@ -40,6 +40,10 @@ public class LavaAudioPlayer extends AudioSourceBase {
         this.isRunning = false;
     }
 
+    public void setVolume(int volume) {
+        audioPlayer.setVolume(volume);
+    }
+
     public boolean isRunning() {
         return isRunning;
     }

@@ -32,8 +32,8 @@ public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHand
         return this.audioPlayer.isRunning();
     }
 
-    public void enqueue(AudioTrack track) {
-        this.audioQueue.add(track);
+    public void setVolume(int volume) {
+       audioPlayer.setVolume(volume);
     }
 
     public void playNow(AudioTrack track) {

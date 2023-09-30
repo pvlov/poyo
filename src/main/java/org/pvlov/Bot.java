@@ -7,14 +7,11 @@ import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.audio.AudioConnection;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
-import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberJoinEvent;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberLeaveEvent;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
-import org.javacord.api.interaction.SlashCommand;
 import org.javacord.api.interaction.SlashCommandInteraction;
-import org.javacord.api.interaction.SlashCommandOption;
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberJoinListener;
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLeaveListener;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
@@ -54,7 +51,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             return;
         }
         event.getChannel().connect().thenAccept(audioConnection -> {
-            //Only update connection if the Voice Channel has changed, unneded reconnection makes the bot leave and then rejoin the same channel
+            //Only update connection if the Voice Channel has changed, unneeded reconnection makes the bot leave and then rejoin the same channel
             if (!currConnection.getChannel().equals(audioConnection)) {
                 currConnection = audioConnection;
                 queue.registerAudioDestination(audioConnection);
@@ -97,9 +94,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                     .setAuthor(interaction.getUser())
                     .addField("Playing: ", link));
 
-            interaction.getUser().getConnectedVoiceChannels().stream()
-                    .filter(serverVoiceChannel -> serverVoiceChannel.isConnected(interaction.getUser()))
-                    .findFirst().ifPresentOrElse(
+            interaction.getUser().getConnectedVoiceChannel(interaction.getServer().get())
+                    .ifPresentOrElse(
                             targetVoiceChannel -> {
                                 targetVoiceChannel.connect().thenAccept(audioConnection -> {
                                     queue.registerAudioDestination(audioConnection);
@@ -123,6 +119,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             var embedBuilder = new EmbedBuilder();
 
             // why not let it be a simple for loop?
+            // get() should still be O(1), since it's based on Array
             AudioTrack curr = null;
             int counter = 0;
             for (var it = queue.iter(); it.hasNext(); curr = it.next()) {
@@ -133,10 +130,22 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
         } else if (interaction.getCommandName().equals("stop")) {
             queue.clear();
-            interaction.getServer().get().getVoiceChannels().stream()
-                    .filter(serverVoiceChannel -> api.getYourself().isConnected(serverVoiceChannel))
-                    .findFirst().get()
-                    .disconnect();
+            api.getYourself().getConnectedVoiceChannel(interaction.getServer().get())
+                    .ifPresent(ServerVoiceChannel::disconnect);
+
+        } else if (interaction.getCommandName().equals("volume")) {
+            if (!queue.isRunning()) {
+                Utils.sendQuickEphemeralResponse(interaction, "Bot is not currently playing!");
+                return;
+            }
+            long arg = interaction.getArguments().get(0).getLongValue().get();
+
+            if (arg < 0 || arg > 100) {
+                Utils.sendQuickEphemeralResponse(interaction, "Make sure to only specify a value between 0 and 100");
+                return;
+            }
+            Utils.sendQuickEphemeralResponse(interaction, "Adjusted Volume!");
+            queue.setVolume((int) arg);
         }
     }
 }
