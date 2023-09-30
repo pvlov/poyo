@@ -3,6 +3,8 @@ package org.pvlov;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Stack;
 
 import org.javacord.api.DiscordApi;
 import org.javacord.api.audio.AudioConnection;
@@ -51,6 +53,36 @@ public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHand
         }
 
         this.audioQueue.addFirst(track);
+        audioPlayer.playAudio(audioQueue.peek());
+    }
+
+    public void playNowAll(List<AudioTrack> tracks) {
+        if (!audioQueue.isEmpty()) {
+            this.audioQueue.pop();
+        }
+
+        for (int i = tracks.size() - 1; i >= 0; i--) {
+            this.audioQueue.addFirst(tracks.get(i).makeClone());
+        }
+
+        audioPlayer.playAudio(audioQueue.peek());
+    }
+
+    public void playNowAll(Iterable<AudioTrack> tracks) {
+        if (!audioQueue.isEmpty()) {
+            this.audioQueue.pop();
+        }
+
+        Stack<AudioTrack> stack = new Stack<AudioTrack>();
+
+        for (AudioTrack track : tracks) {
+            stack.push(track);
+        }
+
+        while (!stack.empty()) {
+            this.audioQueue.addFirst(stack.pop().makeClone());
+        }
+
         audioPlayer.playAudio(audioQueue.peek());
     }
 

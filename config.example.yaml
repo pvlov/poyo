@@ -1,0 +1,5 @@
+//Add me to  bin/main directory or in the same folder as the jar file. Rename to config.yaml
+DISCORD_TOKEN: MY_DISCORD_TOKEN
+VIPS: [000000000]
+CACHED_TRACKS: ["LINK"]
+PLAY_NICKNAME: "The Nickname"

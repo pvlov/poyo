@@ -3,15 +3,14 @@ package org.pvlov;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.audio.AudioConnection;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
-import org.javacord.api.entity.channel.VoiceChannel;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
-import org.javacord.api.entity.user.User;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberJoinEvent;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberLeaveEvent;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
@@ -21,34 +20,54 @@ import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLe
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 import org.javatuples.Pair;
 
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
         SlashCommandCreateListener {
+
+    public static final Logger LOG = LogManager.getLogger();
+
     private static final String BOT_NAME = "Poyo";
     private static final String NEVER_GONNA_GIVE_YOU_UP = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-    private static final String DERPATE = "https://www.youtube.com/watch?v=Z1LUj7_8xiI";
-
-    private final long PATE_ID;
 
     public DiscordApi api;
-    AudioPlayerManager playerManager;
-    AudioQueue queue;
-    Optional<AudioTrack> derPate;
+
+    private AudioPlayerManager playerManager;
+    private AudioQueue queue;
+    private Cache audioCache;
+    private List<Long> VIPs;
 
     // TODO: Multiple connections at once
-    AudioConnection currConnection;
+    private AudioConnection currConnection;
 
-    public Bot(String token, Long pate) {
-        this.api = new DiscordApiBuilder().setToken(token).login().join();
+    public Bot() {
+
+        this.api = new DiscordApiBuilder().setToken(Config.INSTANCE.getString("DISCORD_TOKEN").orElseGet(() -> {
+            LOG.error("No DISCORD_TOKEN set. Abort.");
+            return null;
+        })).login().join();
+
         this.playerManager = new DefaultAudioPlayerManager();
         this.queue = AudioQueue.buildQueue(this.playerManager, api);
+        this.audioCache = new Cache(playerManager);
+        this.VIPs = new ArrayList<>();
 
         api.addServerVoiceChannelMemberJoinListener(this);
         api.addServerVoiceChannelMemberLeaveListener(this);
         api.addSlashCommandCreateListener(this);
-        this.derPate = Utils.decodeTrack(this.playerManager, Bot.DERPATE);
-        this.PATE_ID = pate;
+
+        this.audioCache.store(Config.INSTANCE.getStringArray("VIP_TRACKS").orElseGet(() -> {
+            LOG.warn("No VIP tracks set.");
+            return new ArrayList<>();
+        }));
+
+        this.VIPs.addAll(Config.INSTANCE.getLongArray("VIPS").orElseGet(() -> {
+            LOG.warn("No VIP's set.");
+            return new ArrayList<>();
+        }));
 
         for (Server server : api.getServers()) {
             if (server.getNickname(api.getYourself()).orElse("") != BOT_NAME) {
@@ -56,8 +75,13 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             }
 
             for (ServerVoiceChannel channel : server.getVoiceChannels()) {
-                if (channel.getConnectedUsers().stream().anyMatch(user -> user.getId() == PATE_ID)) {
-                    Utils.simulateJoinEvent(this, channel, PATE_ID);
+                if (channel.getConnectedUsers().stream().anyMatch(user -> this.VIPs.contains(user.getId()))) {
+                    LOG.info("VIP found. Joing voice channel...");
+
+                    // Any VIP will do.
+                    Utils.simulateJoinEvent(this, channel, this.VIPs.get(0));
+                    // Just join the first matching channel.
+                    break;
                 }
             }
         }
@@ -67,10 +91,17 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
     @Override
     public void onServerVoiceChannelMemberJoin(ServerVoiceChannelMemberJoinEvent event) {
-        // For now, ignore all Non-Enrico joins
-        if (event.getUser().getId() != PATE_ID) {
+        if (!this.VIPs.contains(event.getUser().getId())) {
             return;
         }
+
+        // If serving already another vip. Do not change.
+        if (currConnection != null) {
+            return;
+        }
+
+        LOG.info("VIP found. Joing voice channel...");
+
         event.getChannel().connect().thenAccept(audioConnection -> {
             // Only update connection if the Voice Channel has changed, unneeded
             // reconnection makes the bot leave and then rejoin the same channel
@@ -79,8 +110,14 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 queue.registerAudioDestination(audioConnection);
             }
 
-            derPate.ifPresent(audioTrack -> queue.playNow(audioTrack));
-            api.getYourself().updateNickname(audioConnection.getServer(), "Mein Pate");
+            if (this.audioCache.empty()) {
+                LOG.warn("The VIP cache is empty. You can add tracks via the config file.");
+                return;
+            }
+
+            queue.playNowAll(this.audioCache.iter());
+            api.getYourself().updateNickname(audioConnection.getServer(),
+                    Config.INSTANCE.getString("PLAY_NICKNAME").orElse(BOT_NAME));
         }).exceptionally(throwable -> {
             throwable.printStackTrace();
             return null;
@@ -89,16 +126,17 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
     @Override
     public void onServerVoiceChannelMemberLeave(ServerVoiceChannelMemberLeaveEvent event) {
-        if (event.getUser().getId() == PATE_ID) {
-            if (currConnection != null) {
-                api.getYourself().updateNickname(currConnection.getServer(), BOT_NAME);
+        if (currConnection != null) {
+            if (currConnection.getChannel().equals(event.getChannel())) {
+                if (!event.getChannel().getConnectedUserIds().stream().anyMatch(userid -> this.VIPs.contains(userid))) {
+                    LOG.info("All VIP's left. Leaving voice channel...");
 
-                currConnection.close().join();
-                queue.clear();
-                currConnection = null;
+                    api.getYourself().updateNickname(currConnection.getServer(), BOT_NAME);
 
-                // Preload
-                derPate.ifPresent(audioTrack -> this.derPate = Optional.of(audioTrack.makeClone()));
+                    currConnection.close().join();
+                    queue.clear();
+                    currConnection = null;
+                }
             }
         }
     }
