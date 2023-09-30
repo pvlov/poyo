@@ -8,8 +8,10 @@ import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.audio.AudioConnection;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
+import org.javacord.api.entity.channel.VoiceChannel;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberJoinEvent;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberLeaveEvent;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
@@ -29,7 +31,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
     private final long PATE_ID;
 
-    DiscordApi api;
+    public DiscordApi api;
     AudioPlayerManager playerManager;
     AudioQueue queue;
     Optional<AudioTrack> derPate;
@@ -37,7 +39,6 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     // TODO: Multiple connections at once
     AudioConnection currConnection;
 
-    // 625040314117128192
     public Bot(String token, Long pate) {
         this.api = new DiscordApiBuilder().setToken(token).login().join();
         this.playerManager = new DefaultAudioPlayerManager();
@@ -52,6 +53,12 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         for (Server server : api.getServers()) {
             if (server.getNickname(api.getYourself()).orElse("") != BOT_NAME) {
                 api.getYourself().updateNickname(server, BOT_NAME);
+            }
+
+            for (ServerVoiceChannel channel : server.getVoiceChannels()) {
+                if (channel.getConnectedUsers().stream().anyMatch(user -> user.getId() == PATE_ID)) {
+                    Utils.simulateJoinEvent(this, channel, PATE_ID);
+                }
             }
         }
 

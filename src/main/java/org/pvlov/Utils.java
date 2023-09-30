@@ -9,8 +9,12 @@ import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+
+import org.javacord.api.entity.channel.ServerVoiceChannel;
 import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.user.User;
+import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberJoinEvent;
 import org.javacord.api.interaction.SlashCommandInteraction;
 
 public class Utils {
@@ -49,6 +53,37 @@ public class Utils {
                 .respond();
     }
 
+    public static void simulateJoinEvent(Bot bot, ServerVoiceChannel channel, long userID) {
+        bot.onServerVoiceChannelMemberJoin(new ServerVoiceChannelMemberJoinEvent() {
+
+            @Override
+            public ServerVoiceChannel getChannel() {
+                return channel;
+            }
+
+            @Override
+            public DiscordApi getApi() {
+                return bot.api;
+            }
+
+            @Override
+            public User getUser() {
+                return bot.api.getUserById(userID).join();
+            }
+
+            @Override
+            public Optional<ServerVoiceChannel> getOldChannel() {
+                return Optional.empty();
+            }
+
+            @Override
+            public boolean isMove() {
+                return false;
+            }
+
+        });
+    }
+
     public static Optional<AudioTrack> decodeTrack(AudioPlayerManager playerManager, String link) {
         FixWeirdResultHandler result = new FixWeirdResultHandler() {
 
@@ -73,4 +108,5 @@ public class Utils {
         playerManager.loadItemSync(link, result);
         return result.getTrack();
     }
+
 }
