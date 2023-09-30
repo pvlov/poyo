@@ -118,6 +118,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 .setName("jump").addOption(new SlashCommandOptionBuilder()
                         .setRequired(true)
                         .setType(SlashCommandOptionType.LONG)
+                        .setMinLength(1)
                         .setName("index")
                         .setDescription("the target index")
                         .build()
@@ -266,7 +267,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                     return;
                 }
                 // Be aware that for easier use and compatibility with /playlist, jump will be 1-indexed
-                if (jumpTarget <= 0 || jumpTarget > queue.getSize()) {
+                if (jumpTarget > queue.getSize()) {
                     Utils.sendQuickEphemeralResponse(interaction, "Please make sure the index provided is in the bounds of the Queue size");
                     return;
                 }
