@@ -22,9 +22,10 @@ import java.util.Optional;
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
         SlashCommandCreateListener {
     private static final String BOT_NAME = "Poyo";
-    private static final long ENRICO_ID = 625040314117128192L;
     private static final String NEVER_GONNA_GIVE_YOU_UP = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
     private static final String DERPATE = "https://www.youtube.com/watch?v=HWqKPWO5T4o";
+
+    private final long PATE_ID;
 
     DiscordApi api;
     AudioPlayerManager playerManager;
@@ -34,7 +35,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     // TODO: Multiple connections at once
     AudioConnection currConnection;
 
-    public Bot(String token) {
+    // 625040314117128192
+    public Bot(String token, Long pate) {
         this.api = new DiscordApiBuilder().setToken(token).login().join();
         this.playerManager = new DefaultAudioPlayerManager();
         this.queue = AudioQueue.buildQueue(this.playerManager, api);
@@ -43,21 +45,23 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         api.addServerVoiceChannelMemberLeaveListener(this);
         api.addSlashCommandCreateListener(this);
         this.derPate = Utils.decodeTrack(this.playerManager, Bot.DERPATE);
+        this.PATE_ID = pate;
     }
 
     @Override
     public void onServerVoiceChannelMemberJoin(ServerVoiceChannelMemberJoinEvent event) {
         // For now, ignore all Non-Enrico joins
-        if (event.getUser().getId() != ENRICO_ID) {
+        if (event.getUser().getId() != PATE_ID) {
             return;
         }
         event.getChannel().connect().thenAccept(audioConnection -> {
             // Only update connection if the Voice Channel has changed, unneeded
             // reconnection makes the bot leave and then rejoin the same channel
-            if (!currConnection.getChannel().equals(audioConnection.getChannel())) {
+            if (currConnection == null || !currConnection.getChannel().equals(audioConnection.getChannel())) {
                 currConnection = audioConnection;
                 queue.registerAudioDestination(audioConnection);
             }
+
             derPate.ifPresent(audioTrack -> queue.playNow(audioTrack));
         }).exceptionally(throwable -> {
             throwable.printStackTrace();
@@ -67,7 +71,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
     @Override
     public void onServerVoiceChannelMemberLeave(ServerVoiceChannelMemberLeaveEvent event) {
-        if (event.getUser().getId() == ENRICO_ID) {
+        if (event.getUser().getId() == PATE_ID) {
             if (currConnection != null) {
                 currConnection.close().join();
                 queue.clear();
