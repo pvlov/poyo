@@ -30,6 +30,10 @@ public class AudioQueue extends AudioEventAdapter
         return new AudioQueue(new LavaAudioPlayer(api, playerManager.createPlayer()));
     }
 
+    public int getSize() {
+        return this.audioQueue.size();
+    }
+
     public AudioQueue(LavaAudioPlayer audioPlayer) {
         this.audioQueue = new ArrayDeque<>();
         this.audioPlayer = audioPlayer;
@@ -96,6 +100,13 @@ public class AudioQueue extends AudioEventAdapter
             return;
         }
         audioPlayer.playAudio(audioQueue.peek());
+    }
+
+    // Skips the first n AudioTracks in the AudioQueue
+    public void skip(long n) {
+        for (int i = 0; i < n; ++i) {
+            skip();
+        }
     }
 
     public Iterable<AudioTrack> iter() {
