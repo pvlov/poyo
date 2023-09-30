@@ -51,7 +51,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         this.PATE_ID = pate;
 
         for (Server server : api.getServers()) {
-            if (server.getNickname(api.getYourself()).orElse("") != BOT_NAME) {
+            if (!server.getNickname(api.getYourself()).orElse("").equals(BOT_NAME)) {
                 api.getYourself().updateNickname(server, BOT_NAME);
             }
 
@@ -109,9 +109,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         var args = interaction.getArguments();
 
         switch (Utils.parseCommandName(interaction.getCommandName())) {
-            case PING -> {
-                Utils.sendQuickEphemeralResponse(interaction, "Pong!");
-            }
+            case PING -> Utils.sendQuickEphemeralResponse(interaction, "Pong!");
 
             case PLAY -> {
                 String link = args.get(0).getStringValue().orElse(NEVER_GONNA_GIVE_YOU_UP);
@@ -152,7 +150,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             case PLAYLIST -> {
                 var embedBuilder = new EmbedBuilder();
 
-                for (Pair<Integer, AudioTrack> entry : queue.enumerate()) {
+                for (Pair<Integer, AudioTrack> entry : queue) {
                     embedBuilder.addField(String.valueOf(entry.getValue0()), entry.getValue1().getInfo().title, true);
                 }
                 Utils.sendQuickEphemeralResponse(interaction, embedBuilder);
@@ -162,6 +160,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 queue.clear();
                 api.getYourself().getConnectedVoiceChannel(interaction.getServer().get())
                         .ifPresent(ServerVoiceChannel::disconnect);
+                Utils.sendQuickEphemeralResponse(interaction, "Bot was stopped");
             }
 
             case VOLUME -> {
