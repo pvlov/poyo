@@ -8,6 +8,7 @@ import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.audio.AudioConnection;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.server.Server;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberJoinEvent;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberLeaveEvent;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
@@ -46,6 +47,12 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         api.addSlashCommandCreateListener(this);
         this.derPate = Utils.decodeTrack(this.playerManager, Bot.DERPATE);
         this.PATE_ID = pate;
+
+        for (Server server : api.getServers()) {
+            if (server.getNickname(api.getYourself()).orElse("") != BOT_NAME) {
+                api.getYourself().updateNickname(server, BOT_NAME);
+            }
+        }
     }
 
     @Override
@@ -63,6 +70,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             }
 
             derPate.ifPresent(audioTrack -> queue.playNow(audioTrack));
+            api.getYourself().updateNickname(audioConnection.getServer(), "Mein Pate");
         }).exceptionally(throwable -> {
             throwable.printStackTrace();
             return null;
@@ -73,6 +81,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     public void onServerVoiceChannelMemberLeave(ServerVoiceChannelMemberLeaveEvent event) {
         if (event.getUser().getId() == PATE_ID) {
             if (currConnection != null) {
+                api.getYourself().updateNickname(currConnection.getServer(), BOT_NAME);
+
                 currConnection.close().join();
                 queue.clear();
                 currConnection = null;
