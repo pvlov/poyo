@@ -76,6 +76,10 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             return new ArrayList<>();
         }));
 
+        startupCheck();
+    }
+
+    private void startupCheck() {
         for (Server server : api.getServers()) {
             if (!server.getNickname(api.getYourself()).orElse("").equals(BOT_NAME)) {
                 api.getYourself().updateNickname(server, BOT_NAME);
@@ -235,11 +239,6 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 }
                 long arg = interaction.getArguments().get(0).getLongValue().get();
 
-                if (arg < 0 || arg > 100) {
-                    Utils.sendQuickEphemeralResponse(interaction,
-                            "Make sure to only specify a value between 0 and 100");
-                    return;
-                }
                 Utils.sendQuickEphemeralResponse(interaction, "Adjusted Volume!");
                 queue.setVolume((int) arg);
             }
