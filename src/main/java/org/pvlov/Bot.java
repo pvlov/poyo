@@ -104,7 +104,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         Set<SlashCommandBuilder> builders = new HashSet<>();
         builders.add(new SlashCommandBuilder().setName("ping").setDescription("For testing purposes."));
         builders.add(new SlashCommandBuilder()
-                .setName("play").addOption(new SlashCommandOptionBuilder().setRequired(true)
+                .setName("play").addOption(new SlashCommandOptionBuilder().setRequired(false)
                         .setType(SlashCommandOptionType.STRING).setName("link").setDescription("The link to the song.")
                         .build())
                 .setDescription("Play a song."));
@@ -181,17 +181,20 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             case PING -> Utils.sendQuickEphemeralResponse(interaction, "Pong!");
 
             case PLAY -> {
-                String link = args.get(0).getStringValue().orElse(NEVER_GONNA_GIVE_YOU_UP);
+
+                final String link;
+
+                if (args.size() >= 1 && args.get(0).getStringValue().isPresent()) {
+                    link = args.get(0).getStringValue().get();
+                } else {
+                    link = NEVER_GONNA_GIVE_YOU_UP;
+                }
 
                 if (queue.isRunning()) {
                     playerManager.loadItem(link, queue);
                     Utils.sendQuickEphemeralResponse(interaction, "Track successfully added to Queue! :D");
                     return;
                 }
-
-                Utils.sendQuickEphemeralResponse(interaction, new EmbedBuilder()
-                        .setAuthor(interaction.getUser())
-                        .addField("Playing: ", link));
 
                 interaction.getUser().getConnectedVoiceChannel(interaction.getServer().get())
                         .ifPresentOrElse(
@@ -200,10 +203,14 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                                         queue.registerAudioDestination(audioConnection);
                                         playerManager.loadItem(link, queue);
                                     });
+
+                                    Utils.sendQuickEphemeralResponse(interaction, new EmbedBuilder()
+                                            .setAuthor(interaction.getUser())
+                                            .addField("Playing: ", link));
                                 },
                                 () -> {
                                     Utils.sendQuickEphemeralResponse(interaction,
-                                            "You need to be in a Voice-Channel to use the /play command");
+                                            "You need to be in a Voice-Channel in order to use the /play command");
                                 });
             }
 
