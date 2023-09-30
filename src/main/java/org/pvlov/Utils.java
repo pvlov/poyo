@@ -41,6 +41,7 @@ public class Utils {
                 .setFlags(MessageFlag.EPHEMERAL)
                 .respond();
     }
+
     public static void sendQuickEphemeralResponse(SlashCommandInteraction interaction, EmbedBuilder embed) {
         interaction.createImmediateResponder()
                 .addEmbed(embed)

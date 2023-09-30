@@ -15,8 +15,8 @@ import org.javacord.api.interaction.SlashCommandInteraction;
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberJoinListener;
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLeaveListener;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
+import org.javatuples.Pair;
 
-import java.util.Iterator;
 import java.util.Optional;
 
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
@@ -52,7 +52,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             return;
         }
         event.getChannel().connect().thenAccept(audioConnection -> {
-            //Only update connection if the Voice Channel has changed, unneeded reconnection makes the bot leave and then rejoin the same channel
+            // Only update connection if the Voice Channel has changed, unneeded
+            // reconnection makes the bot leave and then rejoin the same channel
             if (!currConnection.getChannel().equals(audioConnection)) {
                 currConnection = audioConnection;
                 queue.registerAudioDestination(audioConnection);
@@ -107,9 +108,9 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                                     });
                                 },
                                 () -> {
-                                    Utils.sendQuickEphemeralResponse(interaction, "You need to be in a Voice-Channel to use the /play command");
-                                }
-                        );
+                                    Utils.sendQuickEphemeralResponse(interaction,
+                                            "You need to be in a Voice-Channel to use the /play command");
+                                });
             }
 
             case SKIP -> {
@@ -124,13 +125,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             case PLAYLIST -> {
                 var embedBuilder = new EmbedBuilder();
 
-                int counter = 1;
-                for (AudioTrack track : queue.getAudioQueue()) {
-                    embedBuilder.addField(
-                            String.valueOf(counter++),
-                            track.getInfo().title,
-                            true
-                    );
+                for (Pair<Integer, AudioTrack> entry : queue.enumerate()) {
+                    embedBuilder.addField(String.valueOf(entry.getValue0()), entry.getValue1().getInfo().title, true);
                 }
                 Utils.sendQuickEphemeralResponse(interaction, embedBuilder);
             }
@@ -149,7 +145,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 long arg = interaction.getArguments().get(0).getLongValue().get();
 
                 if (arg < 0 || arg > 100) {
-                    Utils.sendQuickEphemeralResponse(interaction, "Make sure to only specify a value between 0 and 100");
+                    Utils.sendQuickEphemeralResponse(interaction,
+                            "Make sure to only specify a value between 0 and 100");
                     return;
                 }
                 Utils.sendQuickEphemeralResponse(interaction, "Adjusted Volume!");

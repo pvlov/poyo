@@ -5,6 +5,7 @@ import java.util.Deque;
 import java.util.Iterator;
 
 import org.javacord.api.audio.AudioConnection;
+import org.javatuples.Pair;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
@@ -33,7 +34,7 @@ public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHand
     }
 
     public void setVolume(int volume) {
-       audioPlayer.setVolume(volume);
+        audioPlayer.setVolume(volume);
     }
 
     public void playNow(AudioTrack track) {
@@ -55,8 +56,36 @@ public class AudioQueue extends AudioEventAdapter implements AudioLoadResultHand
         }
         audioPlayer.playAudio(audioQueue.peek());
     }
-    public Deque<AudioTrack> getAudioQueue() {
+
+    public Iterable<AudioTrack> iter() {
         return this.audioQueue;
+    }
+
+    public Iterable<Pair<Integer, AudioTrack>> enumerate() {
+
+        var iterator = this.audioQueue.iterator();
+
+        return new Iterable<Pair<Integer, AudioTrack>>() {
+
+            @Override
+            public Iterator<Pair<Integer, AudioTrack>> iterator() {
+
+                return new Iterator<Pair<Integer, AudioTrack>>() {
+                    private int counter = 0;
+                    private Iterator<AudioTrack> iter = iterator;
+
+                    @Override
+                    public boolean hasNext() {
+                        return iter.hasNext();
+                    }
+
+                    @Override
+                    public Pair<Integer, AudioTrack> next() {
+                        return new Pair<Integer, AudioTrack>(counter++, iter.next());
+                    }
+                };
+            }
+        };
     }
 
     public void clear() {

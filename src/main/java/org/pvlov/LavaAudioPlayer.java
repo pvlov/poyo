@@ -1,6 +1,5 @@
 package org.pvlov;
 
-
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventListener;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
@@ -8,7 +7,6 @@ import com.sedmelluq.discord.lavaplayer.track.playback.AudioFrame;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.audio.AudioSource;
 import org.javacord.api.audio.AudioSourceBase;
-
 
 // A dedicated class to playing music to declutter the Bot class
 public class LavaAudioPlayer extends AudioSourceBase {

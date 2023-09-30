@@ -20,6 +20,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     implementation ("org.javacord:javacord:3.8.0")
     implementation ("dev.arbjerg:lavaplayer:2.0.2")
+    implementation ("org.javatuples:javatuples:1.2")
 }
 
 tasks.test {
