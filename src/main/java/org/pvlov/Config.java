@@ -47,29 +47,42 @@ public class Config {
     }
 
     public Optional<String> getString(String key) {
-        if (!data.containsKey(key))
+        if (!data.containsKey(key)
+                || !(data.get(key) instanceof String val))
             return Optional.empty();
-        return Optional.of((String) data.get(key));
+
+        return Optional.of(val);
     }
 
+    // Maybe make this generic idk, would have to use a class parameter tho
+    @SuppressWarnings("unchecked")
     public Optional<List<String>> getStringArray(String key) {
-        if (!data.containsKey(key)) {
+        if (!data.containsKey(key)
+                || !(data.get(key) instanceof List<?> list)
+                || list.isEmpty()
+                || !(list.get(0) instanceof String))
             return Optional.empty();
-        }
 
-        return Optional.of((List<String>) data.get(key));
+        return Optional.of((List<String>) list);
     }
 
+    @SuppressWarnings("unchecked")
     public Optional<List<Long>> getLongArray(String key) {
-        if (!data.containsKey(key))
+        if (!data.containsKey(key)
+                || !(data.get(key) instanceof List<?> list)
+                || list.isEmpty()
+                || !(list.get(0) instanceof Long))
             return Optional.empty();
-        return Optional.of((List<Long>) data.get(key));
+
+        return Optional.of((List<Long>) list);
     }
 
     public Optional<Integer> getInt(String key) {
-        if (!data.containsKey(key))
+        if (!data.containsKey(key)
+                || !(data.get(key) instanceof Integer val))
             return Optional.empty();
-        return Optional.of((int) data.get(key));
+
+        return Optional.of(val);
     }
 
     public void setConfig(String key, String value) {
