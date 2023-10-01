@@ -183,24 +183,13 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
 
     public Future<AudioTrackLoadResult> loadItem(final AudioReference identifier) {
         try {
-            return trackInfoExecutorService.submit(() -> loadItemSync(identifier));
+            return trackInfoExecutorService.submit(() -> checkSourcesForItem(identifier));
         } catch (RejectedExecutionException e) {
             FriendlyException exception = new FriendlyException("Cannot queue loading a track, queue is full.", SUSPICIOUS, e);
             AudioTrackLoadResult result = AudioTrackLoadResult.Err(exception, AudioTrackLoadResult.LoadResultType.ERROR);
             return new CompletedFuture(result);
         }
     }
-
-    public AudioTrackLoadResult loadItemSync(AudioReference identifier) {
-
-        try {
-            return checkSourcesForItem(identifier);
-        } catch (Throwable throwable) {
-            FriendlyException exception = new FriendlyException("Cannot queue loading a track, queue is full.", SUSPICIOUS, throwable);
-            return AudioTrackLoadResult.Err(exception, AudioTrackLoadResult.LoadResultType.ERROR);
-        }
-    }
-
     public AudioTrackLoadResult checkSourcesForItem(AudioReference reference) {
         AudioReference currentReference = reference;
         AudioTrackLoadResult result = AudioTrackLoadResult.Ok(new ArrayList<>(), AudioTrackLoadResult.LoadResultType.OK);
