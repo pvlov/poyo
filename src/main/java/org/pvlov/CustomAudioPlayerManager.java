@@ -190,8 +190,7 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
             return trackInfoExecutorService.submit(() -> checkSourcesForItem(identifier));
         } catch (RejectedExecutionException e) {
             FriendlyException exception = new FriendlyException("Cannot queue loading a track, thread-queue is full.", SUSPICIOUS, e);
-            AudioTrackLoadResult result = AudioTrackLoadResult.Err(exception, AudioTrackLoadResult.LoadResultType.ERROR);
-            return new CompletedFuture(result);
+            return AudioTrackLoadResult.Err(exception, AudioTrackLoadResult.LoadResultType.ERROR);
         }
     }
 

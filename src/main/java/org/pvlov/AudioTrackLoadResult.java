@@ -4,14 +4,43 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
-public class AudioTrackLoadResult {
+public class AudioTrackLoadResult implements Future<AudioTrackLoadResult> {
 
     private final LoadResultType type;
     private final List<AudioTrack> audioTracks;
 
     private final FriendlyException exception;
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        return false;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return false;
+    }
+
+    @Override
+    public boolean isDone() {
+        return true;
+    }
+
+    @Override
+    public AudioTrackLoadResult get() throws InterruptedException, ExecutionException {
+        return this;
+    }
+
+    @Override
+    public AudioTrackLoadResult get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        return this;
+    }
 
     public enum LoadResultType {
         OK,
