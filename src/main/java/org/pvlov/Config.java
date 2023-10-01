@@ -63,11 +63,32 @@ public class Config {
         }
     }
 
+    public <T> Optional<T> getEntry(String key, Class<T> clazz) {
+        Object entry = data.get(key);
+        return clazz.isInstance(entry) ? Optional.of(clazz.cast(entry)) : Optional.empty();
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> Optional<List<T>> getListEntry(String key, Class<T> clazz) {
+        if (data.containsKey(key)
+                && data.get(key) instanceof List<?> list
+                && !list.isEmpty()
+                && clazz.isInstance(list.get(0))) {
+            return Optional.of((List<T>) list);
+        }
+        return Optional.empty();
+    }
+
+    // DEPRECATED
+    /*
     public Optional<String> getString(String key) {
         return data.get(key) instanceof String val ? Optional.of(val) : Optional.empty();
     }
 
-    // Maybe make this generic idk, would have to use a class parameter tho
+    public Optional<Integer> getInt(String key) {
+        return data.get(key) instanceof Integer val ? Optional.of(val) : Optional.empty();
+    }
+
     @SuppressWarnings("unchecked")
     public Optional<List<String>> getStringArray(String key) {
         if (data.containsKey(key) && data.get(key) instanceof List<?> list
@@ -85,10 +106,7 @@ public class Config {
         }
         return Optional.empty();
     }
-
-    public Optional<Integer> getInt(String key) {
-        return data.get(key) instanceof Integer val ? Optional.of(val) : Optional.empty();
-    }
+    */
 
     public void setConfig(String key, String value) {
         data.put(key, value);
