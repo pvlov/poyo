@@ -22,7 +22,11 @@ public class Config {
             File file = new File(getWorkingDir() + "/config.yml");
             if (!file.exists())
                 file.createNewFile();
-            data = new Yaml().load(new FileInputStream(getWorkingDir() + "/config.yml"));
+
+            var inputStream = new FileInputStream(file);
+            data = new Yaml().load(inputStream);
+            inputStream.close();
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -33,7 +37,10 @@ public class Config {
             File file = new File(getWorkingDir() + "/config.yml");
             if (!file.exists())
                 file.createNewFile();
-            new Yaml().dump(data, new PrintWriter(file));
+
+            var writer = new PrintWriter(file);
+            new Yaml().dump(data, writer);
+            writer.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
