@@ -38,9 +38,6 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
     private static final int MAXIMUM_LOAD_REDIRECTS = 5;
     private static final int DEFAULT_LOADER_POOL_SIZE = 10;
     private static final int LOADER_QUEUE_CAPACITY = 5000;
-
-    //private static final Logger log = LoggerFactory.getLogger(DefaultAudioPlayerManager.class);
-
     private final List<AudioSourceManager> sourceManagers;
     // Executors
     private final ExecutorService trackPlaybackExecutorService;
@@ -147,12 +144,10 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
 
         try {
             if (!checkSourcesForItem(reference, resultHandler, reported)) {
-                //log.debug("No matches for track with identifier {}.", reference.identifier);
                 resultHandler.noMatches();
             }
         } catch (Throwable throwable) {
             if (reported[0]) {
-                //log.warn("Load result handler for {} threw an exception", reference.identifier, throwable);
             } else {
                 dispatchItemLoadFailure(reference.identifier, resultHandler, throwable);
             }
@@ -263,17 +258,12 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
 
     private Future<Void> handleLoadRejected(String identifier, AudioLoadResultHandler resultHandler, RejectedExecutionException e) {
         FriendlyException exception = new FriendlyException("Cannot queue loading a track, queue is full.", SUSPICIOUS, e);
-        //ExceptionTools.log(log, exception, "queueing item " + identifier);
-
         resultHandler.loadFailed(exception);
-
         return ExecutorTools.COMPLETED_VOID;
     }
 
     private void dispatchItemLoadFailure(String identifier, AudioLoadResultHandler resultHandler, Throwable throwable) {
         FriendlyException exception = ExceptionTools.wrapUnfriendlyExceptions("Something went wrong when looking up the track", FAULT, throwable);
-        //ExceptionTools.log(log, exception, "loading item " + identifier);
-
         resultHandler.loadFailed(exception);
     }
 
