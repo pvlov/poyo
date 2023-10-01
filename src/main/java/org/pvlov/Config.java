@@ -5,18 +5,21 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.*;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class Config {
 
     public static Config INSTANCE = new Config();
 
-    private HashMap<String, Object> data;
+    private Map<String, Object> data;
 
     private Config() {
         loadConfig();
     }
 
+    @SuppressWarnings({"unchecked"})
     public void loadConfig() {
         try {
             File file = new File(getWorkingDir() + "/config.yml");
@@ -24,8 +27,19 @@ public class Config {
                 file.createNewFile();
 
             var inputStream = new FileInputStream(file);
-            data = new Yaml().load(inputStream);
+            var data = new Yaml().load(inputStream);
             inputStream.close();
+
+            // config file containing no / invalid tokens
+            if (!(data instanceof HashMap<?, ?>)) {
+                this.data = new HashMap<>();
+                return;
+            }
+
+            // remove null values from Map
+            this.data = ((HashMap<String, Object>) data).entrySet().stream().filter(
+                    entry -> entry.getValue() != null).collect(
+                            Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         } catch (IOException e) {
             throw new RuntimeException(e);
