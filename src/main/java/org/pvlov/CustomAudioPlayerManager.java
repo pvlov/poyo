@@ -43,25 +43,22 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
     //private static final Logger log = LoggerFactory.getLogger(DefaultAudioPlayerManager.class);
 
     private final List<AudioSourceManager> sourceManagers;
-    private volatile Function<RequestConfig, RequestConfig> httpConfigurator;
-    private volatile Consumer<HttpClientBuilder> httpBuilderConfigurator;
-
     // Executors
     private final ExecutorService trackPlaybackExecutorService;
     private final ThreadPoolExecutor trackInfoExecutorService;
     private final ScheduledExecutorService scheduledExecutorService;
     private final OrderedExecutor orderedInfoExecutor;
-
-    // Configuration
-    private volatile long trackStuckThreshold;
-    private volatile AudioConfiguration configuration;
     private final AtomicLong cleanupThreshold;
-    private volatile int frameBufferDuration;
-    private volatile boolean useSeekGhosting;
-
     // Additional services
     private final GarbageCollectionMonitor garbageCollectionMonitor;
     private final AudioPlayerLifecycleManager lifecycleManager;
+    private volatile Function<RequestConfig, RequestConfig> httpConfigurator;
+    private volatile Consumer<HttpClientBuilder> httpBuilderConfigurator;
+    // Configuration
+    private volatile long trackStuckThreshold;
+    private final AudioConfiguration configuration;
+    private volatile int frameBufferDuration;
+    private volatile boolean useSeekGhosting;
 
 
     /**
@@ -177,19 +174,40 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
         }
     }
 
+    /*
+     * [Poyo-Bot-specific]
+     *
+     * @param identifier String identifying the source for the AudioTrack like a Youtube-link for example
+     * @return Returns a Future of the Result of this method
+     * */
+
     public Future<AudioTrackLoadResult> loadItem(final String identifier) {
         return loadItem(new AudioReference(identifier, null));
     }
 
+    /*
+     * [Poyo-Bot-specific]
+     *
+     * @param identifier AudioReference identifying the source for the AudioTrack like a Youtube-link for example
+     * @return Returns a Future of the Result of this method
+     * */
     public Future<AudioTrackLoadResult> loadItem(final AudioReference identifier) {
         try {
             return trackInfoExecutorService.submit(() -> checkSourcesForItem(identifier));
         } catch (RejectedExecutionException e) {
-            FriendlyException exception = new FriendlyException("Cannot queue loading a track, queue is full.", SUSPICIOUS, e);
+            FriendlyException exception = new FriendlyException("Cannot queue loading a track, thread-queue is full.", SUSPICIOUS, e);
             AudioTrackLoadResult result = AudioTrackLoadResult.Err(exception, AudioTrackLoadResult.LoadResultType.ERROR);
             return new CompletedFuture(result);
         }
     }
+
+    /*
+     * [Poyo-Bot-specific]
+     * 
+     * @param identifier AudioReference identifying the source for the AudioTrack like a Youtube-link for example
+     * @return Returns the Result of sourcing the AudioReference
+     * */
+
     public AudioTrackLoadResult checkSourcesForItem(AudioReference reference) {
         AudioReference currentReference = reference;
         AudioTrackLoadResult result = AudioTrackLoadResult.Ok(new ArrayList<>(), AudioTrackLoadResult.LoadResultType.OK);
@@ -211,6 +229,12 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
         return AudioTrackLoadResult.Err(new FriendlyException("Unexpected Error", SUSPICIOUS, new RuntimeException()), AudioTrackLoadResult.LoadResultType.ERROR);
     }
 
+    /*
+    * [Poyo-Bot-specific]
+    *
+    * @param reference AudioReference identifying the source for the AudioTrack like a Youtube-link for example
+    * @return Returns an AudioItem if it was successful in sourcing the item using the AudioSourceManagers of this objects SourceManagers
+    * */
     private AudioItem checkSourcesForItemOnce(AudioReference reference) {
         for (AudioSourceManager sourceManager : sourceManagers) {
             if (reference.containerDescriptor != null && !(sourceManager instanceof ProbingAudioSourceManager)) {
