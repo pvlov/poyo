@@ -29,7 +29,7 @@ public class Config {
             }
 			try (var inputStream = new FileInputStream(file)) {
 				data = new Yaml().loadAs(inputStream, Map.class);
-			} catch (RuntimeException e) {
+			} catch (RuntimeException ignored) {
 				LOG.error("Error parsing config.yml, make sure it's valid YAML");
 			}
 
@@ -78,35 +78,6 @@ public class Config {
         }
         return Optional.empty();
     }
-
-    // DEPRECATED
-    /*
-    public Optional<String> getString(String key) {
-        return data.get(key) instanceof String val ? Optional.of(val) : Optional.empty();
-    }
-
-    public Optional<Integer> getInt(String key) {
-        return data.get(key) instanceof Integer val ? Optional.of(val) : Optional.empty();
-    }
-
-    @SuppressWarnings("unchecked")
-    public Optional<List<String>> getStringArray(String key) {
-        if (data.containsKey(key) && data.get(key) instanceof List<?> list
-                && !list.isEmpty() && list.get(0) instanceof String) {
-            return Optional.of((List<String>) list);
-        }
-        return Optional.empty();
-    }
-
-    @SuppressWarnings("unchecked")
-    public Optional<List<Long>> getLongArray(String key) {
-        if (data.containsKey(key) && data.get(key) instanceof List<?> list
-                && !list.isEmpty() && list.get(0) instanceof Long) {
-            return Optional.of((List<Long>) list);
-        }
-        return Optional.empty();
-    }
-    */
 
     public void setConfig(String key, String value) {
         data.put(key, value);
