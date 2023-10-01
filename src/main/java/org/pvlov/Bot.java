@@ -1,8 +1,5 @@
 package org.pvlov;
 
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
-import com.sedmelluq.discord.lavaplayer.player.CustomAudioPlayerManager;
-import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -199,8 +196,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 }
 
                 if (queue.isRunning()) {
-                    //playerManager.loadItem(link, queue);
-                    playerManager.loadItem(link);
+                    var result = playerManager.loadItem(link);
                     Utils.sendQuickEphemeralResponse(interaction, "Track successfully added to Queue! :D");
                     return;
                 }

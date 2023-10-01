@@ -1,5 +1,6 @@
-package com.sedmelluq.discord.lavaplayer.player;
+package org.pvlov;
 
+import com.sedmelluq.discord.lavaplayer.player.*;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManager;
 import com.sedmelluq.discord.lavaplayer.source.ProbingAudioSourceManager;
 import com.sedmelluq.discord.lavaplayer.tools.*;
@@ -13,8 +14,6 @@ import com.sedmelluq.lava.common.tools.DaemonThreadFactory;
 import com.sedmelluq.lava.common.tools.ExecutorTools;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.pvlov.AudioTrackLoadResult;
-import org.pvlov.CompletedFuture;
 
 import java.io.*;
 import java.util.*;
@@ -52,11 +51,11 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
     // Additional services
     private final GarbageCollectionMonitor garbageCollectionMonitor;
     private final AudioPlayerLifecycleManager lifecycleManager;
+    private final AudioConfiguration configuration;
     private volatile Function<RequestConfig, RequestConfig> httpConfigurator;
     private volatile Consumer<HttpClientBuilder> httpBuilderConfigurator;
     // Configuration
     private volatile long trackStuckThreshold;
-    private final AudioConfiguration configuration;
     private volatile int frameBufferDuration;
     private volatile boolean useSeekGhosting;
 
@@ -203,7 +202,7 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
 
     /*
      * [Poyo-Bot-specific]
-     * 
+     *
      * @param identifier AudioReference identifying the source for the AudioTrack like a Youtube-link for example
      * @return Returns the Result of sourcing the AudioReference
      * */
@@ -230,11 +229,11 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
     }
 
     /*
-    * [Poyo-Bot-specific]
-    *
-    * @param reference AudioReference identifying the source for the AudioTrack like a Youtube-link for example
-    * @return Returns an AudioItem if it was successful in sourcing the item using the AudioSourceManagers of this objects SourceManagers
-    * */
+     * [Poyo-Bot-specific]
+     *
+     * @param reference AudioReference identifying the source for the AudioTrack like a Youtube-link for example
+     * @return Returns an AudioItem if it was successful in sourcing the item using the AudioSourceManagers of this objects SourceManagers
+     * */
     private AudioItem checkSourcesForItemOnce(AudioReference reference) {
         for (AudioSourceManager sourceManager : sourceManagers) {
             if (reference.containerDescriptor != null && !(sourceManager instanceof ProbingAudioSourceManager)) {
