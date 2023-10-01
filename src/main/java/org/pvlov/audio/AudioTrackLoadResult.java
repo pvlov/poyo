@@ -1,4 +1,4 @@
-package org.pvlov;
+package org.pvlov.audio;
 
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
@@ -99,7 +99,6 @@ public class AudioTrackLoadResult implements Future<AudioTrackLoadResult> {
         }
         return audioTracks;
     }
-
     public void addToAudioTracks(AudioTrack track) {
         audioTracks.add(track);
     }

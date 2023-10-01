@@ -21,6 +21,9 @@ import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberJo
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLeaveListener;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 import org.javatuples.Pair;
+import org.pvlov.audio.AudioQueue;
+import org.pvlov.audio.AudioTrackLoadResultHandler;
+import org.pvlov.audio.CustomAudioPlayerManager;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -196,8 +199,13 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 }
 
                 if (queue.isRunning()) {
-                    var result = playerManager.loadItem(link);
-                    Utils.sendQuickEphemeralResponse(interaction, "Track successfully added to Queue! :D");
+                    var result = AudioTrackLoadResultHandler.await(playerManager.loadItem(link));
+                    if (result.isOk()) {
+                        queue.enqeue(result.unwrap());
+                        Utils.sendQuickEphemeralResponse(interaction, "Song(s) successfully loaded!");
+                    } else {
+                        Utils.sendQuickEphemeralResponse(interaction, "Loading the Song(s) failed!");
+                    }
                     return;
                 }
 
@@ -206,7 +214,15 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                                 targetVoiceChannel -> {
                                     targetVoiceChannel.connect().thenAccept(audioConnection -> {
                                         queue.registerAudioDestination(audioConnection);
-                                        playerManager.loadItem(link, queue);
+
+                                        var result = AudioTrackLoadResultHandler.await(playerManager.loadItem(link));
+                                        if (result.isOk()) {
+                                            queue.enqeue(result.unwrap());
+                                            Utils.sendQuickEphemeralResponse(interaction, "Song(s) successfully loaded!");
+                                        } else {
+                                            Utils.sendQuickEphemeralResponse(interaction, "Loading the Song(s) failed!");
+                                        }
+
                                     });
 
                                     Utils.sendQuickEphemeralResponse(interaction, new EmbedBuilder()

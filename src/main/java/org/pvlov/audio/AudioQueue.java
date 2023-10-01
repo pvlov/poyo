@@ -1,4 +1,4 @@
-package org.pvlov;
+package org.pvlov.audio;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -120,6 +120,10 @@ public class AudioQueue extends AudioEventAdapter
             }
         }
         audioQueue.clear();
+    }
+
+    public void enqeue(List<AudioTrack> audioTracks) {
+        audioQueue.addAll(audioTracks);
     }
 
     @Override

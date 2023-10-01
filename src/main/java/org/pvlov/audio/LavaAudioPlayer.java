@@ -1,4 +1,4 @@
-package org.pvlov;
+package org.pvlov.audio;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventListener;

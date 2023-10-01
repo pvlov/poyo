@@ -1,4 +1,4 @@
-package org.pvlov;
+package org.pvlov.audio;
 
 import com.sedmelluq.discord.lavaplayer.player.*;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManager;
@@ -14,6 +14,7 @@ import com.sedmelluq.lava.common.tools.DaemonThreadFactory;
 import com.sedmelluq.lava.common.tools.ExecutorTools;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.pvlov.audio.AudioTrackLoadResult;
 
 import java.io.*;
 import java.util.*;
