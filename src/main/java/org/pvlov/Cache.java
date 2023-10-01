@@ -37,8 +37,9 @@ public class Cache {
     }
 
     public boolean store(List<String> links) {
-        if (links == null)
+        if (links == null) {
             return true;
+        }
 
         boolean success = true;
         for (String link : links) {

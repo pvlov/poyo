@@ -121,8 +121,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                         .setLongMinValue(1)
                         .setName("index")
                         .setDescription("the target index")
-                        .build()
-                )
+                        .build())
                 .setDescription("Jump to a specific Song in the Playlist"));
         api.bulkOverwriteGlobalApplicationCommands(builders).join();
     }
@@ -234,7 +233,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 var embedBuilder = new EmbedBuilder();
 
                 for (Pair<Integer, AudioTrack> entry : queue) {
-                    embedBuilder.addField(String.valueOf(entry.getValue0() + 1), entry.getValue1().getInfo().title, true);
+                    embedBuilder.addField(String.valueOf(entry.getValue0() + 1), entry.getValue1().getInfo().title,
+                            true);
                 }
                 Utils.sendQuickEphemeralResponse(interaction, embedBuilder);
             }
@@ -263,12 +263,15 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 if (args.size() >= 1 && args.get(0).getLongValue().isPresent()) {
                     jumpTarget = args.get(0).getLongValue().get();
                 } else {
-                    Utils.sendQuickEphemeralResponse(interaction, "Please only use a number as the target for the /jump command");
+                    Utils.sendQuickEphemeralResponse(interaction,
+                            "Please only use a number as the target for the /jump command");
                     return;
                 }
-                // Be aware that for easier use and compatibility with /playlist, jump will be 1-indexed
+                // Be aware that for easier use and compatibility with /playlist, jump will be
+                // 1-indexed
                 if (jumpTarget > queue.getSize()) {
-                    Utils.sendQuickEphemeralResponse(interaction, "Please make sure the index provided is in the bounds of the Queue size");
+                    Utils.sendQuickEphemeralResponse(interaction,
+                            "Please make sure the index provided is in the bounds of the Queue size");
                     return;
                 }
                 queue.skip(jumpTarget - 1);
