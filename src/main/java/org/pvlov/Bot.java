@@ -1,6 +1,7 @@
 package org.pvlov;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.player.CustomAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import org.apache.logging.log4j.LogManager;
@@ -39,7 +40,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
     public DiscordApi api;
 
-    private final AudioPlayerManager playerManager;
+    private final CustomAudioPlayerManager playerManager;
     private final AudioQueue queue;
     private final Cache audioCache;
     private final List<Long> VIPs;
@@ -53,7 +54,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             return null;
         })).login().join();
 
-        this.playerManager = new DefaultAudioPlayerManager();
+        this.playerManager = new CustomAudioPlayerManager();
         this.queue = AudioQueue.buildQueue(this.playerManager, api);
         this.audioCache = new Cache(playerManager);
         this.VIPs = new ArrayList<>();
@@ -198,7 +199,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 }
 
                 if (queue.isRunning()) {
-                    playerManager.loadItem(link, queue);
+                    //playerManager.loadItem(link, queue);
+                    playerManager.loadItem(link);
                     Utils.sendQuickEphemeralResponse(interaction, "Track successfully added to Queue! :D");
                     return;
                 }
