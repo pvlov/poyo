@@ -73,6 +73,12 @@ public class AudioQueue extends AudioEventAdapter
         audioPlayer.playAudio(audioQueue.peek());
     }
 
+    public void start() {
+        if (!audioQueue.isEmpty()) {
+            audioPlayer.playAudio(audioQueue.peek());
+        }
+    }
+
     public void playNowAll(Iterable<AudioTrack> tracks) {
         if (!audioQueue.isEmpty()) {
             this.audioQueue.pop();

@@ -215,7 +215,8 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
                 result.addToAudioTracks((AudioTrack) item);
             } else if (item instanceof AudioPlaylist) {
                 result.addToAudioTracks(((AudioPlaylist) item).getTracks());
-            } else if (!(item instanceof AudioReference)) {
+            }
+            if (!(item instanceof AudioReference)) {
                 return result;
             }
             currentReference = (AudioReference) item;

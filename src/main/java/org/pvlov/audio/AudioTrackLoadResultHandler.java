@@ -1,11 +1,10 @@
 package org.pvlov.audio;
 
-import org.javacord.api.entity.message.embed.EmbedBuilder;
-import org.javacord.api.interaction.SlashCommandInteraction;
-
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
 public class AudioTrackLoadResultHandler {
     public static AudioTrackLoadResult await(Future<AudioTrackLoadResult> future) {
@@ -20,8 +19,36 @@ public class AudioTrackLoadResultHandler {
             }).get();
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }  finally {
+        } finally {
             service.shutdown();
         }
+    }
+
+    /**
+     * @param future    The task that should be waited on
+     * @param onSuccess is called if the Result was Ok
+     * @param onFail    is called if the Result was Err
+     */
+
+    public static void attachCallbacks(Future<AudioTrackLoadResult> future,
+                                       Consumer<AudioTrackLoadResult> onSuccess,
+                                       Consumer<AudioTrackLoadResult> onFail) {
+
+        ExecutorService service = Executors.newSingleThreadExecutor();
+
+        service.submit(() -> {
+            try {
+                var result = future.get();
+                if (result.isOk()) {
+                    onSuccess.accept(result);
+                } else {
+                    onFail.accept(result);
+                }
+            } catch (ExecutionException | InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                service.shutdown();
+            }
+        });
     }
 }

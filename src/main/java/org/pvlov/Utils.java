@@ -41,14 +41,14 @@ public class Utils {
         return SlashCommand.UNEXPECTED;
     }
 
-    public static void sendQuickEphemeralResponse(SlashCommandInteraction interaction, String response) {
+    public static void respondEphemeral(SlashCommandInteraction interaction, String response) {
         interaction.createImmediateResponder()
                 .setContent(response)
                 .setFlags(MessageFlag.EPHEMERAL)
                 .respond();
     }
 
-    public static void sendQuickEphemeralResponse(SlashCommandInteraction interaction, EmbedBuilder embed) {
+    public static void respondEphemeral(SlashCommandInteraction interaction, EmbedBuilder embed) {
         interaction.createImmediateResponder()
                 .addEmbed(embed)
                 .setFlags(MessageFlag.EPHEMERAL)

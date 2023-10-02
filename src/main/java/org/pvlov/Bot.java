@@ -186,7 +186,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         var args = interaction.getArguments();
 
         switch (Utils.parseCommandName(interaction.getCommandName())) {
-            case PING -> Utils.sendQuickEphemeralResponse(interaction, "Pong!");
+            case PING -> Utils.respondEphemeral(interaction, "Pong!");
 
             case PLAY -> {
 
@@ -199,13 +199,16 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 }
 
                 if (queue.isRunning()) {
-                    var result = AudioTrackLoadResultHandler.await(playerManager.loadItem(link));
-                    if (result.isOk()) {
-                        queue.enqeue(result.unwrap());
-                        Utils.sendQuickEphemeralResponse(interaction, "Song(s) successfully loaded!");
-                    } else {
-                        Utils.sendQuickEphemeralResponse(interaction, "Loading the Song(s) failed!");
-                    }
+                    var future = playerManager.loadItem(link);
+
+                    AudioTrackLoadResultHandler.attachCallbacks(future,
+                            result -> {
+                                queue.enqeue(result.unwrap());
+                                Utils.respondEphemeral(interaction, "Successfully loaded Tracks!");
+                            },
+                            error -> {
+                                Utils.respondEphemeral(interaction, "Something went wrong while loading tracks");
+                            });
                     return;
                 }
 
@@ -214,33 +217,36 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                                 targetVoiceChannel -> {
                                     targetVoiceChannel.connect().thenAccept(audioConnection -> {
                                         queue.registerAudioDestination(audioConnection);
+                                        var future = playerManager.loadItem(link);
 
-                                        var result = AudioTrackLoadResultHandler.await(playerManager.loadItem(link));
-                                        if (result.isOk()) {
-                                            queue.enqeue(result.unwrap());
-                                            Utils.sendQuickEphemeralResponse(interaction, "Song(s) successfully loaded!");
-                                        } else {
-                                            Utils.sendQuickEphemeralResponse(interaction, "Loading the Song(s) failed!");
-                                        }
-
+                                        AudioTrackLoadResultHandler.attachCallbacks(future,
+                                                result -> {
+                                                    queue.enqeue(result.unwrap());
+                                                    Utils.respondEphemeral(interaction, "Successfully loaded Track");
+                                                    queue.start();
+                                                },
+                                                error -> {
+                                                    Utils.respondEphemeral(interaction, "Something went wrong while loading tracks");
+                                                }
+                                        );
                                     });
 
-                                    Utils.sendQuickEphemeralResponse(interaction, new EmbedBuilder()
+                                    Utils.respondEphemeral(interaction, new EmbedBuilder()
                                             .setAuthor(interaction.getUser())
                                             .addField("Playing: ", link));
                                 },
                                 () -> {
-                                    Utils.sendQuickEphemeralResponse(interaction,
+                                    Utils.respondEphemeral(interaction,
                                             "You need to be in a Voice-Channel in order to use the /play command");
                                 });
             }
 
             case SKIP -> {
                 if (!queue.isRunning()) {
-                    Utils.sendQuickEphemeralResponse(interaction, "The Bot is not playing Music, skip ignored");
+                    Utils.respondEphemeral(interaction, "The Bot is not playing Music, skip ignored");
                     return;
                 }
-                Utils.sendQuickEphemeralResponse(interaction, "Skipped Track!");
+                Utils.respondEphemeral(interaction, "Skipped Track!");
                 queue.skip();
             }
 
@@ -250,24 +256,24 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 for (Pair<Integer, AudioTrack> entry : queue) {
                     embedBuilder.addField(String.valueOf(entry.getValue0() + 1), entry.getValue1().getInfo().title, true);
                 }
-                Utils.sendQuickEphemeralResponse(interaction, embedBuilder);
+                Utils.respondEphemeral(interaction, embedBuilder);
             }
 
             case STOP -> {
                 queue.clear();
                 api.getYourself().getConnectedVoiceChannel(interaction.getServer().get())
                         .ifPresent(ServerVoiceChannel::disconnect);
-                Utils.sendQuickEphemeralResponse(interaction, "Bot was stopped");
+                Utils.respondEphemeral(interaction, "Bot was stopped");
             }
 
             case VOLUME -> {
                 if (!queue.isRunning()) {
-                    Utils.sendQuickEphemeralResponse(interaction, "Bot is not currently playing!");
+                    Utils.respondEphemeral(interaction, "Bot is not currently playing!");
                     return;
                 }
                 long arg = interaction.getArguments().get(0).getLongValue().get();
 
-                Utils.sendQuickEphemeralResponse(interaction, "Adjusted Volume!");
+                Utils.respondEphemeral(interaction, "Adjusted Volume!");
                 queue.setVolume((int) arg);
             }
 
@@ -277,19 +283,19 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 if (args.size() >= 1 && args.get(0).getLongValue().isPresent()) {
                     jumpTarget = args.get(0).getLongValue().get();
                 } else {
-                    Utils.sendQuickEphemeralResponse(interaction, "Please only use a number as the target for the /jump command");
+                    Utils.respondEphemeral(interaction, "Please only use a number as the target for the /jump command");
                     return;
                 }
                 // Be aware that for easier use and compatibility with /playlist, jump will be 1-indexed
                 if (jumpTarget > queue.getSize()) {
-                    Utils.sendQuickEphemeralResponse(interaction, "Please make sure the index provided is in the bounds of the Queue size");
+                    Utils.respondEphemeral(interaction, "Please make sure the index provided is in the bounds of the Queue size");
                     return;
                 }
                 queue.skip(jumpTarget - 1);
-                Utils.sendQuickEphemeralResponse(interaction, "Jumped to Track " + jumpTarget + "!");
+                Utils.respondEphemeral(interaction, "Jumped to Track " + jumpTarget + "!");
             }
 
-            case UNEXPECTED -> Utils.sendQuickEphemeralResponse(interaction, "Something unexpected happened!");
+            case UNEXPECTED -> Utils.respondEphemeral(interaction, "Something unexpected happened!");
         }
     }
 }
