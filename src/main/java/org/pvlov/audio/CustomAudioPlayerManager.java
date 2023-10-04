@@ -14,7 +14,6 @@ import com.sedmelluq.lava.common.tools.DaemonThreadFactory;
 import com.sedmelluq.lava.common.tools.ExecutorTools;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.pvlov.audio.AudioTrackLoadResult;
 
 import java.io.*;
 import java.util.*;
@@ -144,7 +143,7 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
         boolean[] reported = new boolean[1];
 
         try {
-            if (!checkSourcesForItem(reference, resultHandler, reported)) {
+            if (!loadItemSync(reference, resultHandler, reported)) {
                 resultHandler.noMatches();
             }
         } catch (Throwable throwable) {
@@ -188,7 +187,7 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
      * */
     public Future<AudioTrackLoadResult> loadItem(final AudioReference identifier) {
         try {
-            return trackInfoExecutorService.submit(() -> checkSourcesForItem(identifier));
+            return trackInfoExecutorService.submit(() -> loadItemSync(identifier));
         } catch (RejectedExecutionException e) {
             FriendlyException exception = new FriendlyException("Cannot queue loading a track, thread-queue is full.", SUSPICIOUS, e);
             return AudioTrackLoadResult.Err(exception, AudioTrackLoadResult.LoadResultType.ERROR);
@@ -202,7 +201,7 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
      * @return Returns the Result of sourcing the AudioReference
      * */
 
-    public AudioTrackLoadResult checkSourcesForItem(AudioReference reference) {
+    public AudioTrackLoadResult loadItemSync(AudioReference reference) {
         AudioReference currentReference = reference;
         AudioTrackLoadResult result = AudioTrackLoadResult.Ok(new ArrayList<>(), AudioTrackLoadResult.LoadResultType.OK);
 
@@ -447,7 +446,7 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
         trackInfoExecutorService.setMaximumPoolSize(poolSize);
     }
 
-    private boolean checkSourcesForItem(AudioReference reference, AudioLoadResultHandler resultHandler, boolean[] reported) {
+    private boolean loadItemSync(AudioReference reference, AudioLoadResultHandler resultHandler, boolean[] reported) {
         AudioReference currentReference = reference;
 
         for (int redirects = 0; redirects < MAXIMUM_LOAD_REDIRECTS && currentReference.identifier != null; redirects++) {

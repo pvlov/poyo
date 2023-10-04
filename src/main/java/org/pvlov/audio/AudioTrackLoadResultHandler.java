@@ -13,7 +13,6 @@ public class AudioTrackLoadResultHandler {
      * @param onSuccess is called if the Result was Ok
      * @param onFail    is called if the Result was Err
      */
-
     public static void attachCallbacks(Future<AudioTrackLoadResult> future,
                                        Consumer<AudioTrackLoadResult> onSuccess,
                                        Consumer<AudioTrackLoadResult> onFail) {

@@ -5,32 +5,37 @@ import java.util.List;
 import java.util.Optional;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.track.AudioReference;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import org.pvlov.audio.CustomAudioPlayerManager;
 
 public class Cache {
 
-    private HashMap<String, AudioTrack> cache;
-    private AudioPlayerManager playerManager;
+    private HashMap<String, List<AudioTrack>> cache;
+    private CustomAudioPlayerManager playerManager;
 
-    public Cache(AudioPlayerManager playerManager) {
+    public Cache(CustomAudioPlayerManager playerManager) {
         this.cache = new HashMap<>();
         this.playerManager = playerManager;
     }
 
-    public Optional<AudioTrack> retrieve(String link) {
+    public Optional<List<AudioTrack>> retrieve(String link) {
         if (cache.containsKey(link)) {
             return Optional.of(cache.get(link));
         }
         return Optional.empty();
     }
 
-    public Iterable<AudioTrack> iter() {
+    public Iterable<List<AudioTrack>> iter() {
         return cache.values();
     }
 
     public boolean store(String link) {
         if (!cache.containsKey(link)) {
-            Utils.decodeTrack(playerManager, link).ifPresent(audioTrack -> cache.put(link, audioTrack));
+            var result = playerManager.loadItemSync(new AudioReference(link, null));
+            if (result.isOk()) {
+                cache.put(link, result.unwrap());
+            }
             return true;
         }
         return false;
