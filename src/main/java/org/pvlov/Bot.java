@@ -8,6 +8,7 @@ import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.audio.AudioConnection;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
+import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberJoinEvent;
@@ -167,7 +168,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     public void onServerVoiceChannelMemberLeave(ServerVoiceChannelMemberLeaveEvent event) {
         if (currConnection != null) {
             if (currConnection.getChannel().equals(event.getChannel())) {
-                if (!event.getChannel().getConnectedUserIds().stream().anyMatch(userid -> this.VIPs.contains(userid))) {
+                if (event.getChannel().getConnectedUserIds().stream().noneMatch(this.VIPs::contains)) {
                     LOG.info("All VIP's left. Leaving voice channel...");
 
                     api.getYourself().updateNickname(currConnection.getServer(), BOT_NAME);
@@ -186,7 +187,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         var args = interaction.getArguments();
 
         switch (Utils.parseCommandName(interaction.getCommandName())) {
-            case PING -> Utils.respondEphemeral(interaction, "Pong!");
+            case PING -> ResponseUtils.respondInstantlyEphemeral(interaction, "Pong!");
 
             case PLAY -> {
 
@@ -204,11 +205,9 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                     AudioTrackLoadResultHandler.attachCallbacks(future,
                             result -> {
                                 queue.enqeue(result.unwrap());
-                                Utils.respondEphemeral(interaction, "Successfully loaded Tracks!");
+                                ResponseUtils.respondLaterPublic(interaction, "Successfully added: " + result);
                             },
-                            error -> {
-                                Utils.respondEphemeral(interaction, "Something went wrong while loading tracks");
-                            });
+                            error -> ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading tracks"));
                     return;
                 }
 
@@ -222,31 +221,26 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                                         AudioTrackLoadResultHandler.attachCallbacks(future,
                                                 result -> {
                                                     queue.enqeue(result.unwrap());
-                                                    Utils.respondEphemeral(interaction, "Successfully loaded Track");
                                                     queue.start();
+                                                    ResponseUtils.respondLaterPublic(interaction,
+                                                            new EmbedBuilder()
+                                                                    .setAuthor(interaction.getUser())
+                                                                    .addField("Playing: ", queue.getNowPlaying().getInfo().title));
                                                 },
-                                                error -> {
-                                                    Utils.respondEphemeral(interaction, "Something went wrong while loading tracks");
-                                                }
+                                                error -> ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks")
                                         );
                                     });
-
-                                    Utils.respondEphemeral(interaction, new EmbedBuilder()
-                                            .setAuthor(interaction.getUser())
-                                            .addField("Playing: ", link));
                                 },
-                                () -> {
-                                    Utils.respondEphemeral(interaction,
-                                            "You need to be in a Voice-Channel in order to use the /play command");
-                                });
+                                () -> ResponseUtils.respondInstantlyEphemeral(interaction,
+                                        "You need to be in a Voice-Channel in order to use the /play command"));
             }
 
             case SKIP -> {
                 if (!queue.isRunning()) {
-                    Utils.respondEphemeral(interaction, "The Bot is not playing Music, skip ignored");
+                    ResponseUtils.respondInstantlyEphemeral(interaction, "The Bot is not playing Music, skip ignored");
                     return;
                 }
-                Utils.respondEphemeral(interaction, "Skipped Track!");
+                ResponseUtils.respondInstantlyEphemeral(interaction, "Skipped Track!");
                 queue.skip();
             }
 
@@ -256,24 +250,24 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 for (Pair<Integer, AudioTrack> entry : queue) {
                     embedBuilder.addField(String.valueOf(entry.getValue0() + 1), entry.getValue1().getInfo().title, true);
                 }
-                Utils.respondEphemeral(interaction, embedBuilder);
+                ResponseUtils.respondInstantlyEphemeral(interaction, embedBuilder);
             }
 
             case STOP -> {
                 queue.clear();
                 api.getYourself().getConnectedVoiceChannel(interaction.getServer().get())
                         .ifPresent(ServerVoiceChannel::disconnect);
-                Utils.respondEphemeral(interaction, "Bot was stopped");
+                ResponseUtils.respondInstantlyEphemeral(interaction, "Bot was stopped");
             }
 
             case VOLUME -> {
                 if (!queue.isRunning()) {
-                    Utils.respondEphemeral(interaction, "Bot is not currently playing!");
+                    ResponseUtils.respondInstantlyEphemeral(interaction, "Bot is not currently playing!");
                     return;
                 }
                 long arg = interaction.getArguments().get(0).getLongValue().get();
 
-                Utils.respondEphemeral(interaction, "Adjusted Volume!");
+                ResponseUtils.respondInstantlyEphemeral(interaction, "Adjusted Volume!");
                 queue.setVolume((int) arg);
             }
 
@@ -283,19 +277,19 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 if (args.size() >= 1 && args.get(0).getLongValue().isPresent()) {
                     jumpTarget = args.get(0).getLongValue().get();
                 } else {
-                    Utils.respondEphemeral(interaction, "Please only use a number as the target for the /jump command");
+                    ResponseUtils.respondInstantlyEphemeral(interaction, "Please only use a number as the target for the /jump command");
                     return;
                 }
                 // Be aware that for easier use and compatibility with /playlist, jump will be 1-indexed
                 if (jumpTarget > queue.getSize()) {
-                    Utils.respondEphemeral(interaction, "Please make sure the index provided is in the bounds of the Queue size");
+                    ResponseUtils.respondInstantlyEphemeral(interaction, "Please make sure the index provided is in the bounds of the Queue size");
                     return;
                 }
                 queue.skip(jumpTarget - 1);
-                Utils.respondEphemeral(interaction, "Jumped to Track " + jumpTarget + "!");
+                ResponseUtils.respondInstantlyEphemeral(interaction, "Jumped to Track " + jumpTarget + "!");
             }
 
-            case UNEXPECTED -> Utils.respondEphemeral(interaction, "Something unexpected happened!");
+            case UNEXPECTED -> ResponseUtils.respondInstantlyEphemeral(interaction, "Something unexpected happened!");
         }
     }
 }

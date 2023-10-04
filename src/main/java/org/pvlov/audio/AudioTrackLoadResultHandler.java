@@ -7,22 +7,6 @@ import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
 public class AudioTrackLoadResultHandler {
-    public static AudioTrackLoadResult await(Future<AudioTrackLoadResult> future) {
-        ExecutorService service = Executors.newSingleThreadExecutor();
-        try {
-            return service.submit(() -> {
-                try {
-                    return future.get();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }).get();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            service.shutdown();
-        }
-    }
 
     /**
      * @param future    The task that should be waited on

@@ -52,6 +52,9 @@ public class AudioQueue extends AudioEventAdapter
         audioPlayer.setVolume(volume);
     }
 
+    public AudioTrack getNowPlaying() {
+        return audioQueue.peek();
+    }
     public void playNow(AudioTrack track) {
         if (!audioQueue.isEmpty()) {
             this.audioQueue.pop();

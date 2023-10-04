@@ -40,21 +40,6 @@ public class Utils {
         }
         return SlashCommand.UNEXPECTED;
     }
-
-    public static void respondEphemeral(SlashCommandInteraction interaction, String response) {
-        interaction.createImmediateResponder()
-                .setContent(response)
-                .setFlags(MessageFlag.EPHEMERAL)
-                .respond();
-    }
-
-    public static void respondEphemeral(SlashCommandInteraction interaction, EmbedBuilder embed) {
-        interaction.createImmediateResponder()
-                .addEmbed(embed)
-                .setFlags(MessageFlag.EPHEMERAL)
-                .respond();
-    }
-
     public static void simulateJoinEvent(Bot bot, ServerVoiceChannel channel, long userID) {
         bot.onServerVoiceChannelMemberJoin(new ServerVoiceChannelMemberJoinEvent() {
 

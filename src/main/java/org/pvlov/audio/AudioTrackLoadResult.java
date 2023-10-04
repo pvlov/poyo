@@ -106,4 +106,13 @@ public class AudioTrackLoadResult implements Future<AudioTrackLoadResult> {
     public void addToAudioTracks(List<AudioTrack> track) {
         audioTracks.addAll(track);
     }
+
+    @Override
+    public String toString() {
+        if (isErr()) {
+            return "Error!";
+        }
+
+        return audioTracks.size() + "Tracks";
+    }
 }
