@@ -8,7 +8,6 @@ import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.audio.AudioConnection;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
-import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberJoinEvent;
@@ -23,8 +22,8 @@ import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLe
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 import org.javatuples.Pair;
 import org.pvlov.audio.AudioQueue;
-import org.pvlov.audio.AudioTrackLoadResultHandler;
 import org.pvlov.audio.CustomAudioPlayerManager;
+import org.pvlov.util.ResponseUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -154,8 +153,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 LOG.warn("The VIP cache is empty. You can add tracks via the config file.");
                 return;
             }
-
-            queue.playNowAll(this.audioCache.iter());
+            // This shouldnt just play anything but the actual Playlist for the VIP
+            //queue.playNowAll(this.audioCache.iter());
             api.getYourself().updateNickname(audioConnection.getServer(),
                     Config.INSTANCE.getString("PLAY_NICKNAME").orElse(BOT_NAME));
         }).exceptionally(throwable -> {
@@ -202,35 +201,43 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 if (queue.isRunning()) {
                     var future = playerManager.loadItem(link);
 
-                    AudioTrackLoadResultHandler.attachCallbacks(future,
-                            result -> {
-                                queue.enqeue(result.unwrap());
-                                ResponseUtils.respondLaterPublic(interaction, "Successfully added: " + result);
-                            },
-                            error -> ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading tracks"));
+                    future.thenAccept(result -> {
+                        if (result.isOk()) {
+                            queue.enqeue(result.unwrap());
+                            ResponseUtils.respondLaterPublic(interaction, "Successfully added: " + result);
+                        } else {
+                            ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading tracks");
+                        }
+                    }).exceptionally(err -> {
+                        ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading tracks");
+                        return null;
+                    });
                     return;
                 }
 
                 interaction.getUser().getConnectedVoiceChannel(interaction.getServer().get())
                         .ifPresentOrElse(
-                                targetVoiceChannel -> {
-                                    targetVoiceChannel.connect().thenAccept(audioConnection -> {
-                                        queue.registerAudioDestination(audioConnection);
-                                        var future = playerManager.loadItem(link);
+                                targetVoiceChannel -> targetVoiceChannel.connect().thenAccept(audioConnection -> {
+                                    queue.registerAudioDestination(audioConnection);
+                                    var future = playerManager.loadItem(link);
 
-                                        AudioTrackLoadResultHandler.attachCallbacks(future,
-                                                result -> {
-                                                    queue.enqeue(result.unwrap());
-                                                    queue.start();
-                                                    ResponseUtils.respondLaterPublic(interaction,
-                                                            new EmbedBuilder()
-                                                                    .setAuthor(interaction.getUser())
-                                                                    .addField("Playing: ", queue.getNowPlaying().getInfo().title));
-                                                },
-                                                error -> ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks")
-                                        );
+                                    future.thenAccept(result -> {
+                                        if (result.isOk()) {
+                                            queue.enqeue(result.unwrap());
+                                            queue.start();
+                                            ResponseUtils.respondLaterPublic(interaction,
+                                                    new EmbedBuilder()
+                                                            .setAuthor(interaction.getUser())
+                                                            .addField("Playing: ", queue.getNowPlaying().getInfo().title));
+                                        } else {
+                                            ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks");
+                                        }
+                                    }).exceptionally(
+                                    error -> {
+                                        ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks");
+                                        return null;
                                     });
-                                },
+                                }),
                                 () -> ResponseUtils.respondInstantlyEphemeral(interaction,
                                         "You need to be in a Voice-Channel in order to use the /play command"));
             }
@@ -245,6 +252,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             }
 
             case PLAYLIST -> {
+                // TODO: Fails with empty queue, add if check for empty queue
                 var embedBuilder = new EmbedBuilder();
 
                 for (Pair<Integer, AudioTrack> entry : queue) {

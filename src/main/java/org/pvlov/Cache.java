@@ -7,6 +7,7 @@ import java.util.Optional;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.track.AudioReference;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import org.pvlov.audio.AudioLoadError;
 import org.pvlov.audio.CustomAudioPlayerManager;
 
 public class Cache {
@@ -34,7 +35,11 @@ public class Cache {
         if (!cache.containsKey(link)) {
             var result = playerManager.loadItemSync(new AudioReference(link, null));
             if (result.isOk()) {
-                cache.put(link, result.unwrap());
+                try {
+                    cache.put(link, result.unwrap());
+                } catch (AudioLoadError e) {
+                    throw new RuntimeException(e);
+                }
             }
             return true;
         }

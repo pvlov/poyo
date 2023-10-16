@@ -14,6 +14,9 @@ import com.sedmelluq.lava.common.tools.DaemonThreadFactory;
 import com.sedmelluq.lava.common.tools.ExecutorTools;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.pvlov.util.result.Err;
+import org.pvlov.util.result.Ok;
+import org.pvlov.util.result.Result;
 
 import java.io.*;
 import java.util.*;
@@ -175,7 +178,7 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
      * @return Returns a Future of the Result of this method
      * */
 
-    public Future<AudioTrackLoadResult> loadItem(final String identifier) {
+    public CompletableFuture<Result<List<AudioTrack>, AudioLoadError>> loadItem(final String identifier) {
         return loadItem(new AudioReference(identifier, null));
     }
 
@@ -185,12 +188,14 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
      * @param identifier AudioReference identifying the source for the AudioTrack like a Youtube-link for example
      * @return Returns a Future of the Result of this method
      * */
-    public Future<AudioTrackLoadResult> loadItem(final AudioReference identifier) {
+    public CompletableFuture<Result<List<AudioTrack>, AudioLoadError>> loadItem(final AudioReference identifier) {
         try {
-            return trackInfoExecutorService.submit(() -> loadItemSync(identifier));
+            return CompletableFuture.supplyAsync(() -> loadItemSync(identifier), trackInfoExecutorService);
         } catch (RejectedExecutionException e) {
-            FriendlyException exception = new FriendlyException("Cannot queue loading a track, thread-queue is full.", SUSPICIOUS, e);
-            return AudioTrackLoadResult.Err(exception, AudioTrackLoadResult.LoadResultType.ERROR);
+
+            //return AudioTrackLoadResult.Err(exception, AudioTrackLoadResult.LoadResultType.ERROR);
+
+            return CompletableFuture.completedFuture(new Err(new AudioLoadError("Thread Pool is full!")));
         }
     }
 
@@ -201,26 +206,25 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
      * @return Returns the Result of sourcing the AudioReference
      * */
 
-    public AudioTrackLoadResult loadItemSync(AudioReference reference) {
+    public Result<List<AudioTrack>, AudioLoadError> loadItemSync(AudioReference reference) {
         AudioReference currentReference = reference;
-        AudioTrackLoadResult result = AudioTrackLoadResult.Ok(new ArrayList<>(), AudioTrackLoadResult.LoadResultType.OK);
+        List<AudioTrack> tracks = new ArrayList<>();
 
         for (int redirects = 0; redirects < MAXIMUM_LOAD_REDIRECTS && currentReference.identifier != null; redirects++) {
             AudioItem item = checkSourcesForItemOnce(currentReference);
             if (item == null) {
-                FriendlyException exception = new FriendlyException("Could not find an AudioTrack with the given identifier", FAULT, new NoSuchElementException());
-                return AudioTrackLoadResult.Err(exception, AudioTrackLoadResult.LoadResultType.NOMATCH);
+                return new Err<>(new AudioLoadError("Could not find an AudioTrack with the given identifier"));
             } else if (item instanceof AudioTrack) {
-                result.addToAudioTracks((AudioTrack) item);
+                tracks.add((AudioTrack) item);
             } else if (item instanceof AudioPlaylist) {
-                result.addToAudioTracks(((AudioPlaylist) item).getTracks());
+                tracks.addAll(((AudioPlaylist) item).getTracks());
             }
             if (!(item instanceof AudioReference)) {
-                return result;
+                return new Ok<List<AudioTrack>>(tracks);
             }
             currentReference = (AudioReference) item;
         }
-        return AudioTrackLoadResult.Err(new FriendlyException("Unexpected Error", SUSPICIOUS, new RuntimeException()), AudioTrackLoadResult.LoadResultType.ERROR);
+        return new Err<>(new AudioLoadError("Unexpected Error!"));
     }
 
     /*

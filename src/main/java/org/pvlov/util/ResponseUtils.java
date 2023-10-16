@@ -1,4 +1,4 @@
-package org.pvlov;
+package org.pvlov.util;
 
 import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
