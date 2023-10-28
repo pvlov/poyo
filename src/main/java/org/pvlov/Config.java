@@ -3,10 +3,7 @@ package org.pvlov;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.pvlov.Bot.LOG;
@@ -69,6 +66,17 @@ public class Config {
 	}
 
 	@SuppressWarnings("unchecked")
+	public <T> Optional<Collection<T>> getCollectionEntry(String key, Class<T> clazz) {
+		if (data.containsKey(key)
+				&& data.get(key) instanceof Collection<?> collection
+				&& !collection.isEmpty()
+				&& clazz.isInstance(collection.stream().findAny().orElseThrow())) {
+			return Optional.of((Collection<T>) collection);
+		}
+		return Optional.empty();
+	}
+
+	@SuppressWarnings("unchecked")
 	public <T> Optional<List<T>> getListEntry(String key, Class<T> clazz) {
 		if (data.containsKey(key)
 				&& data.get(key) instanceof List<?> list
@@ -79,7 +87,35 @@ public class Config {
 		return Optional.empty();
 	}
 
-	public void setConfig(String key, String value) {
+	@SuppressWarnings("unchecked")
+	public <K, V> Optional<Map<K, V>> getMapEntry(String key, Class<K> kClazz, Class<V> vClazz) {
+		if (data.containsKey(key)
+				&& data.get(key) instanceof Map<?, ?> map
+				&& !map.isEmpty()
+				&& kClazz.isInstance(map.entrySet().stream().findAny().orElseThrow().getKey())
+				&& vClazz.isInstance(map.entrySet().stream().findAny().orElseThrow().getValue())) {
+			return Optional.of((Map<K, V>) map);
+		}
+		return Optional.empty();
+	}
+
+	@SuppressWarnings("unchecked")
+	public <K, VK, VV> Optional<Map<K, Map<VK, VV>>> getNestedMapEntry(String key, Class<K> kClazz, Class<VK> vkClazz, Class<VV> vvClazz) {
+		if (data.containsKey(key)
+				&& data.get(key) instanceof Map<?, ?> map
+				&& !map.isEmpty()
+				&& kClazz.isInstance(map.entrySet().stream().findAny().orElseThrow().getKey())
+				&& map.entrySet().stream().findAny().orElseThrow() instanceof Map<?, ?> nestMap
+				&& !nestMap.isEmpty()
+				&& vkClazz.isInstance(nestMap.entrySet().stream().findAny().orElseThrow().getKey())
+				&& vvClazz.isInstance(nestMap.entrySet().stream().findAny().orElseThrow().getValue())) {
+			return Optional.of((Map<K, Map<VK, VV>>) map);
+		}
+		return Optional.empty();
+	}
+
+
+	public void setConfig(String key, Object value) {
 		data.put(key, value);
 	}
 

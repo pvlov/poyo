@@ -24,10 +24,9 @@ import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLe
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 import org.javatuples.Pair;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+
+import static org.pvlov.PermissionSystem.PermissionLevel.*;
 
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
         SlashCommandCreateListener {
@@ -39,6 +38,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
     public DiscordApi api;
 
+    private final PermissionSystem permissionSystem;
     private final AudioPlayerManager playerManager;
     private final AudioQueue queue;
     private final Cache audioCache;
@@ -52,6 +52,9 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             LOG.error("No DISCORD_TOKEN set. Abort.");
             return null;
         })).login().join();
+
+        var permissionEntry = Config.INSTANCE.getNestedMapEntry("PERMISSIONS", Long.class, Long.class, String.class);
+        permissionSystem = permissionEntry.map(PermissionSystem::new).orElseGet(PermissionSystem::new);
 
         this.playerManager = new DefaultAudioPlayerManager();
         this.queue = AudioQueue.buildQueue(this.playerManager, api);
@@ -100,20 +103,32 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     private void createSlashCommands() {
         Set<SlashCommandBuilder> builders = new HashSet<>();
         builders.add(new SlashCommandBuilder().setName("ping").setDescription("For testing purposes."));
+        permissionSystem.registerCommand("ping", IGNORED);
+
         builders.add(new SlashCommandBuilder()
                 .setName("play").addOption(new SlashCommandOptionBuilder().setRequired(false)
                         .setType(SlashCommandOptionType.STRING).setName("link").setDescription("The link to the song.")
                         .build())
                 .setDescription("Play a song."));
+        permissionSystem.registerCommand("play", BASIC);
+
         builders.add(new SlashCommandBuilder().setName("skip").setDescription("Skip the current song."));
+        permissionSystem.registerCommand("skip", BASIC);
+
         builders.add(new SlashCommandBuilder().setName("playlist").setDescription("Print the current playlist."));
+        permissionSystem.registerCommand("playlist", IGNORED);
+
         builders.add(new SlashCommandBuilder().setName("stop").setDescription("Stop playing."));
+        permissionSystem.registerCommand("stop", BASIC);
+
         builders.add(new SlashCommandBuilder()
                 .setName("volume").addOption(new SlashCommandOptionBuilder().setRequired(true)
                         .setType(SlashCommandOptionType.LONG).setLongMinValue(0).setLongMaxValue(100).setName("value")
                         .setDescription("The volume.")
                         .build())
                 .setDescription("Set the volume of the bot."));
+        permissionSystem.registerCommand("volume", ALL);
+
         builders.add(new SlashCommandBuilder()
                 .setName("jump").addOption(new SlashCommandOptionBuilder()
                         .setRequired(true)
@@ -124,6 +139,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                         .build()
                 )
                 .setDescription("Jump to a specific Song in the Playlist"));
+        permissionSystem.registerCommand("jump", ALL);
+
         api.bulkOverwriteGlobalApplicationCommands(builders).join();
     }
 
@@ -182,10 +199,17 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     @Override
     public void onSlashCommandCreate(SlashCommandCreateEvent event) {
         SlashCommandInteraction interaction = event.getSlashCommandInteraction();
+
+        if (!permissionSystem.checkPermissions(interaction)) {
+            Utils.sendQuickEphemeralResponse(interaction, "Permission level not high enough for this command!");
+            return;
+        }
+
         var args = interaction.getArguments();
 
         switch (Utils.parseCommandName(interaction.getCommandName())) {
-            case PING -> Utils.sendQuickEphemeralResponse(interaction, "Pong!");
+            case PING -> {
+                Utils.sendQuickEphemeralResponse(interaction, "Pong!");}
 
             case PLAY -> {
 
