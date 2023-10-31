@@ -4,6 +4,8 @@ import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.interaction.SlashCommandInteraction;
 
+import java.util.Optional;
+
 public class ResponseUtils {
     public static void respondInstantlyEphemeral(SlashCommandInteraction interaction, String response) {
         interaction.createImmediateResponder()
@@ -48,5 +50,9 @@ public class ResponseUtils {
                 .join()
                 .addEmbed(embed)
                 .update().join();
+    }
+
+    public static void foo() {
+        var opt = Optional.empty();
     }
 }

@@ -126,6 +126,7 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T extends AudioSourceManager> T source(Class<T> klass) {
         for (AudioSourceManager sourceManager : sourceManagers) {
             if (klass.isAssignableFrom(sourceManager.getClass())) {
@@ -192,20 +193,16 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
         try {
             return CompletableFuture.supplyAsync(() -> loadItemSync(identifier), trackInfoExecutorService);
         } catch (RejectedExecutionException e) {
-
-            //return AudioTrackLoadResult.Err(exception, AudioTrackLoadResult.LoadResultType.ERROR);
-
-            return CompletableFuture.completedFuture(new Err(new AudioLoadError("Thread Pool is full!")));
+            return CompletableFuture.completedFuture(new Err<>(new AudioLoadError("Thread Pool is full!")));
         }
     }
 
-    /*
+    /**
      * [Poyo-Bot-specific]
      *
-     * @param identifier AudioReference identifying the source for the AudioTrack like a Youtube-link for example
+     * @param reference AudioReference identifying the source for the AudioTrack like a Youtube-link for example
      * @return Returns the Result of sourcing the AudioReference
      * */
-
     public Result<List<AudioTrack>, AudioLoadError> loadItemSync(AudioReference reference) {
         AudioReference currentReference = reference;
         List<AudioTrack> tracks = new ArrayList<>();
@@ -220,7 +217,7 @@ public class CustomAudioPlayerManager extends DefaultAudioPlayerManager implemen
                 tracks.addAll(((AudioPlaylist) item).getTracks());
             }
             if (!(item instanceof AudioReference)) {
-                return new Ok<List<AudioTrack>>(tracks);
+                return new Ok<>(tracks);
             }
             currentReference = (AudioReference) item;
         }

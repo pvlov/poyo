@@ -1,6 +1,11 @@
 package org.pvlov.util.result;
 
-public class Err<E extends Exception> implements Result {
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+public class Err<Void, E extends RuntimeException> implements Result<Void, E> {
 
     E exception;
     public Err(E e) {
@@ -8,7 +13,7 @@ public class Err<E extends Exception> implements Result {
     }
 
     @Override
-    public Object unwrap() throws E {
+    public Void orElseThrow() throws E {
         throw exception;
     }
 
@@ -20,6 +25,37 @@ public class Err<E extends Exception> implements Result {
     @Override
     public boolean isErr() {
         return true;
+    }
+
+    @Override
+    public void ifOk(Consumer<Void> consumer) {}
+
+    @Override
+    public void ifErr(Consumer<E> consumer) {
+        consumer.accept(exception);
+    }
+
+    @Override
+    public void ifPresentOrElse(Consumer<Void> consumer, Runnable runnable) {
+        runnable.run();
+    }
+
+    @Override
+    public Void or(Void orValue) {
+        return orValue;
+    }
+
+    @Override
+    public Void orElse(Supplier<Void> supplier) {
+        return supplier.get();
+    }
+
+    @Override
+    public void mapOk(Consumer<Void> action) {}
+
+    @Override
+    public <U> Optional<U> map(Function<Void, U> function) {
+        return Optional.empty();
     }
 
     public String getMessage() {

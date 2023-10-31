@@ -200,10 +200,9 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
                 if (queue.isRunning()) {
                     var future = playerManager.loadItem(link);
-
                     future.thenAccept(result -> {
                         if (result.isOk()) {
-                            queue.enqeue(result.unwrap());
+                            queue.enqeue(result.orElseThrow());
                             ResponseUtils.respondLaterPublic(interaction, "Successfully added: " + result);
                         } else {
                             ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading tracks");
@@ -215,7 +214,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                     return;
                 }
 
-                interaction.getUser().getConnectedVoiceChannel(interaction.getServer().get())
+                interaction.getUser().getConnectedVoiceChannel(interaction.getServer().orElseThrow())
                         .ifPresentOrElse(
                                 targetVoiceChannel -> targetVoiceChannel.connect().thenAccept(audioConnection -> {
                                     queue.registerAudioDestination(audioConnection);
@@ -223,7 +222,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
                                     future.thenAccept(result -> {
                                         if (result.isOk()) {
-                                            queue.enqeue(result.unwrap());
+                                            queue.enqeue(result.orElseThrow());
                                             queue.start();
                                             ResponseUtils.respondLaterPublic(interaction,
                                                     new EmbedBuilder()
@@ -252,7 +251,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             }
 
             case PLAYLIST -> {
-                // TODO: Fails with empty queue, add if check for empty queue
+                // TODO: Fails with empty queue, add if-check for empty queue
                 var embedBuilder = new EmbedBuilder();
 
                 for (Pair<Integer, AudioTrack> entry : queue) {
