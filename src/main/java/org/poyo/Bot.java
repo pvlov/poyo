@@ -46,7 +46,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     private AudioConnection currConnection;
 
     public Bot() {
-        this.api = new DiscordApiBuilder().setToken(Config.INSTANCE.getString("DISCORD_TOKEN").orElseGet(() -> {
+        this.api = new DiscordApiBuilder().setToken(Config.INSTANCE.getEntry("DISCORD_TOKEN", String.class).orElseGet(() -> {
             LOG.error("No DISCORD_TOKEN set. Abort.");
             return null;
         })).login().join();
@@ -61,12 +61,12 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         api.addServerVoiceChannelMemberLeaveListener(this);
         api.addSlashCommandCreateListener(this);
 
-        this.audioCache.store(Config.INSTANCE.getStringArray("VIP_TRACKS").orElseGet(() -> {
+        this.audioCache.store(Config.INSTANCE.getListEntry("VIP_TRACKS", String.class).orElseGet(() -> {
             LOG.warn("No VIP tracks set.");
             return new ArrayList<>();
         }));
 
-        this.VIPs.addAll(Config.INSTANCE.getLongArray("VIPS").orElseGet(() -> {
+        this.VIPs.addAll(Config.INSTANCE.getListEntry("VIPS", Long.class).orElseGet(() -> {
             LOG.warn("No VIP's set.");
             return new ArrayList<>();
         }));
@@ -153,7 +153,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             // This shouldnt just play anything but the actual Playlist for the VIP
             //queue.playNowAll(this.audioCache.iter());
             api.getYourself().updateNickname(audioConnection.getServer(),
-                    Config.INSTANCE.getString("PLAY_NICKNAME").orElse(BOT_NAME));
+                    Config.INSTANCE.getEntry("PLAY_NICKNAME", String.class).orElse(BOT_NAME));
         }).exceptionally(throwable -> {
             throwable.printStackTrace();
             return null;
