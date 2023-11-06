@@ -1,4 +1,4 @@
-package org.pvlov.audio;
+package org.poyo.audio;
 
 import java.util.ArrayDeque;
 import java.util.Deque;

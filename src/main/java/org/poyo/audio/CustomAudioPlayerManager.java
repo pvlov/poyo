@@ -1,4 +1,4 @@
-package org.pvlov.audio;
+package org.poyo.audio;
 
 import com.sedmelluq.discord.lavaplayer.player.*;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManager;
@@ -14,9 +14,9 @@ import com.sedmelluq.lava.common.tools.DaemonThreadFactory;
 import com.sedmelluq.lava.common.tools.ExecutorTools;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.pvlov.util.result.Err;
-import org.pvlov.util.result.Ok;
-import org.pvlov.util.result.Result;
+import org.poyo.util.result.Err;
+import org.poyo.util.result.Ok;
+import org.poyo.util.result.Result;
 
 import java.io.*;
 import java.util.*;

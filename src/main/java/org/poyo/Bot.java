@@ -1,4 +1,4 @@
-package org.pvlov;
+package org.poyo;
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import org.apache.logging.log4j.LogManager;
@@ -21,9 +21,9 @@ import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberJo
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLeaveListener;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 import org.javatuples.Pair;
-import org.pvlov.audio.AudioQueue;
-import org.pvlov.audio.CustomAudioPlayerManager;
-import org.pvlov.util.ResponseUtils;
+import org.poyo.audio.AudioQueue;
+import org.poyo.audio.CustomAudioPlayerManager;
+import org.poyo.util.ResponseUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -37,14 +37,11 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
     private static final String BOT_NAME = "Poyo";
     private static final String NEVER_GONNA_GIVE_YOU_UP = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-
-    public DiscordApi api;
-
     private final CustomAudioPlayerManager playerManager;
     private final AudioQueue queue;
     private final Cache audioCache;
     private final List<Long> VIPs;
-
+    public DiscordApi api;
     // TODO: Multiple connections at once
     private AudioConnection currConnection;
 
@@ -232,10 +229,10 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                                             ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks");
                                         }
                                     }).exceptionally(
-                                    error -> {
-                                        ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks");
-                                        return null;
-                                    });
+                                            error -> {
+                                                ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks");
+                                                return null;
+                                            });
                                 }),
                                 () -> ResponseUtils.respondInstantlyEphemeral(interaction,
                                         "You need to be in a Voice-Channel in order to use the /play command"));

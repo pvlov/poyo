@@ -1,4 +1,4 @@
-package org.pvlov.util.result;
+package org.poyo.util.result;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -11,6 +11,7 @@ public class Ok<T, Void> implements Result<T, Void> {
     public Ok(T val) {
         this.okValue = val;
     }
+
     @Override
     public T orElseThrow() {
         return okValue;
@@ -28,11 +29,12 @@ public class Ok<T, Void> implements Result<T, Void> {
 
     @Override
     public void ifOk(Consumer<T> consumer) {
-       consumer.accept(okValue);
+        consumer.accept(okValue);
     }
 
     @Override
-    public void ifErr(Consumer<Void> consumer) {}
+    public void ifErr(Consumer<Void> consumer) {
+    }
 
     @Override
     public void ifPresentOrElse(Consumer<T> consumer, Runnable runnable) {
@@ -47,11 +49,6 @@ public class Ok<T, Void> implements Result<T, Void> {
     @Override
     public T orElse(Supplier<T> supplier) {
         return okValue;
-    }
-
-    @Override
-    public void mapOk(final Consumer<T> consumer) {
-        consumer.accept(okValue);
     }
 
     @Override

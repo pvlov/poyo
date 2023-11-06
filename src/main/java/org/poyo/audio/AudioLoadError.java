@@ -1,4 +1,4 @@
-package org.pvlov.audio;
+package org.poyo.audio;
 
 public class AudioLoadError extends RuntimeException {
 

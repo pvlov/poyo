@@ -1,4 +1,4 @@
-package org.pvlov;
+package org.poyo;
 
 import org.yaml.snakeyaml.Yaml;
 

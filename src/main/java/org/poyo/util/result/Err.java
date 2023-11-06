@@ -1,4 +1,4 @@
-package org.pvlov.util.result;
+package org.poyo.util.result;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 public class Err<Void, E extends RuntimeException> implements Result<Void, E> {
 
     E exception;
+
     public Err(E e) {
         this.exception = e;
     }
@@ -28,7 +29,8 @@ public class Err<Void, E extends RuntimeException> implements Result<Void, E> {
     }
 
     @Override
-    public void ifOk(Consumer<Void> consumer) {}
+    public void ifOk(Consumer<Void> consumer) {
+    }
 
     @Override
     public void ifErr(Consumer<E> consumer) {
@@ -51,14 +53,7 @@ public class Err<Void, E extends RuntimeException> implements Result<Void, E> {
     }
 
     @Override
-    public void mapOk(Consumer<Void> action) {}
-
-    @Override
     public <U> Optional<U> map(Function<Void, U> function) {
         return Optional.empty();
-    }
-
-    public String getMessage() {
-        return this.exception.getMessage();
     }
 }
