@@ -1,4 +1,4 @@
-package org.pvlov;
+package org.poyo.audio;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -52,6 +52,9 @@ public class AudioQueue extends AudioEventAdapter
         audioPlayer.setVolume(volume);
     }
 
+    public AudioTrack getNowPlaying() {
+        return audioQueue.peek();
+    }
     public void playNow(AudioTrack track) {
         if (!audioQueue.isEmpty()) {
             this.audioQueue.pop();
@@ -71,6 +74,12 @@ public class AudioQueue extends AudioEventAdapter
         }
 
         audioPlayer.playAudio(audioQueue.peek());
+    }
+
+    public void start() {
+        if (!audioQueue.isEmpty()) {
+            audioPlayer.playAudio(audioQueue.peek());
+        }
     }
 
     public void playNowAll(Iterable<AudioTrack> tracks) {
@@ -120,6 +129,10 @@ public class AudioQueue extends AudioEventAdapter
             }
         }
         audioQueue.clear();
+    }
+
+    public void enqeue(List<AudioTrack> audioTracks) {
+        audioQueue.addAll(audioTracks);
     }
 
     @Override
