@@ -46,7 +46,7 @@ public class Config {
 		}
 	}
 
-	public void saveConfig() {
+	public synchronized void saveConfig() {
 		try {
 			File file = new File(getWorkingDir() + "/config.yml");
 			if (!file.exists()) {
@@ -115,7 +115,7 @@ public class Config {
 	}
 
 
-	public void setConfig(String key, Object value) {
+	public synchronized void setConfig(String key, Object value) {
 		data.put(key, value);
 	}
 

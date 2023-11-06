@@ -3,26 +3,23 @@ package org.pvlov;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.interaction.SlashCommandInteraction;
+import org.javacord.api.interaction.SlashCommandOptionChoice;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class PermissionSystem {
 	public enum PermissionLevel {
-		IGNORED(0),
-		BASIC(1),
-		ALL(2);
+		IGNORED,
+		BASIC,
+		ALL
+	}
 
-		PermissionLevel(int level) {
-			this.level = level;
-		}
-
-		private final int level;
-
-		public boolean isHigherEqual(PermissionLevel comp) {
-			return this.level >= comp.level;
-		}
+	public static List<SlashCommandOptionChoice> getSlashCommandOptionChoices() {
+		return Stream.of(PermissionLevel.values()).map(v -> SlashCommandOptionChoice.create(v.name(), v.ordinal())).toList();
 	}
 
 	private final Map<String, PermissionLevel> permissionNeeded;
@@ -50,12 +47,12 @@ public class PermissionSystem {
 				);
 	}
 
-	public void registerCommand(String command, PermissionLevel permissionLevel) {
-		permissionNeeded.put(command.toUpperCase(), permissionLevel);
+	public void registerCommand(Utils.SlashCommand command, PermissionLevel permissionLevel) {
+		permissionNeeded.put(command.name(), permissionLevel);
 	}
 
 	public boolean checkPermissions(SlashCommandInteraction interaction) {
-		PermissionLevel neededLevel = permissionNeeded.get(interaction.getFullCommandName().toUpperCase());
+		PermissionLevel neededLevel = permissionNeeded.get(Utils.SlashCommand.fromCommandName(interaction.getFullCommandName()).name());
 		if (neededLevel == null) {
 			return true;
 		}
@@ -83,7 +80,7 @@ public class PermissionSystem {
 				userLevel = PermissionLevel.BASIC;
 			}
 		}
-		return userLevel.isHigherEqual(neededLevel);
+		return userLevel.compareTo(neededLevel) >= 0;
 	}
 
 	public void setOrUpdatePermission(Server server, User user, PermissionLevel level) {
@@ -105,9 +102,9 @@ public class PermissionSystem {
 												Collectors.toMap(
 														Map.Entry::getKey,
 														u -> u.getValue().toString().toUpperCase())
-												)
 										)
-						);
+						)
+				);
 
 		Config.INSTANCE.setConfig("PERMISSIONS", configMap);
 		Config.INSTANCE.saveConfig();
