@@ -1,7 +1,5 @@
-package org.pvlov;
+package org.poyo;
 
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
-import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,11 +18,14 @@ import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberJo
 import org.javacord.api.listener.channel.server.voice.ServerVoiceChannelMemberLeaveListener;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 import org.javatuples.Pair;
+import org.poyo.audio.AudioQueue;
+import org.poyo.audio.CustomAudioPlayerManager;
+import org.poyo.util.ResponseUtils;
 
 import java.util.*;
 
-import static org.pvlov.PermissionSystem.PermissionLevel.*;
-import static org.pvlov.Utils.SlashCommand.*;
+import static org.poyo.PermissionSystem.PermissionLevel.*;
+import static org.poyo.Utils.SlashCommand.*;
 
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
 		SlashCommandCreateListener {
@@ -33,15 +34,12 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
 	private static final String BOT_NAME = "Poyo";
 	private static final String NEVER_GONNA_GIVE_YOU_UP = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-
-	public DiscordApi api;
-
 	private final PermissionSystem permissionSystem;
-	private final AudioPlayerManager playerManager;
+	private final CustomAudioPlayerManager playerManager;
 	private final AudioQueue queue;
 	private final Cache audioCache;
 	private final List<Long> VIPs;
-
+	public DiscordApi api;
 	// TODO: Multiple connections at once
 	private AudioConnection currConnection;
 
@@ -54,7 +52,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 		var permissionEntry = Config.INSTANCE.getNestedMapEntry("PERMISSIONS", Long.class, Long.class, String.class);
 		permissionSystem = permissionEntry.map(PermissionSystem::new).orElseGet(PermissionSystem::new);
 
-		this.playerManager = new DefaultAudioPlayerManager();
+		this.playerManager = new CustomAudioPlayerManager();
 		this.queue = AudioQueue.buildQueue(this.playerManager, api);
 		this.audioCache = new Cache(playerManager);
 		this.VIPs = new ArrayList<>();
@@ -159,7 +157,6 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 						.build())
 				.setDescription("Set the volume of the bot."));
 		permissionSystem.registerCommand(VOLUME, ALL);
-
 		builders.add(new SlashCommandBuilder()
 				.setName(JUMP.commandName)
 				.addOption(new SlashCommandOptionBuilder()
@@ -200,8 +197,8 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 				LOG.warn("The VIP cache is empty. You can add tracks via the config file.");
 				return;
 			}
-
-			queue.playNowAll(this.audioCache.iter());
+			// This shouldn't just play anything but the actual Playlist for the VIP
+			//queue.playNowAll(this.audioCache.iter());
 			api.getYourself().updateNickname(audioConnection.getServer(),
 					Config.INSTANCE.getEntry("PLAY_NICKNAME", String.class).orElse(BOT_NAME));
 		}).exceptionally(throwable -> {
@@ -214,7 +211,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 	public void onServerVoiceChannelMemberLeave(ServerVoiceChannelMemberLeaveEvent event) {
 		if (currConnection != null) {
 			if (currConnection.getChannel().equals(event.getChannel())) {
-				if (!event.getChannel().getConnectedUserIds().stream().anyMatch(userid -> this.VIPs.contains(userid))) {
+				if (event.getChannel().getConnectedUserIds().stream().noneMatch(this.VIPs::contains)) {
 					LOG.info("All VIP's left. Leaving voice channel...");
 
 					api.getYourself().updateNickname(currConnection.getServer(), BOT_NAME);
@@ -227,12 +224,13 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 		}
 	}
 
+
 	@Override
 	public void onSlashCommandCreate(SlashCommandCreateEvent event) {
 		SlashCommandInteraction interaction = event.getSlashCommandInteraction();
 
 		if (!permissionSystem.checkPermissions(interaction)) {
-			Utils.sendQuickEphemeralResponse(interaction, "Permission level not high enough for this command!");
+			ResponseUtils.respondInstantlyEphemeral(interaction, "Permission level not high enough for this command!");
 			return;
 		}
 
@@ -240,14 +238,14 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
 		switch (Utils.SlashCommand.fromCommandName(interaction.getCommandName())) {
 			case PING -> {
-				Utils.sendQuickEphemeralResponse(interaction, "Pong!");
+				ResponseUtils.respondInstantlyEphemeral(interaction, "Pong!");
 			}
 			case PERMISSION_SET -> {
 				permissionSystem.setOrUpdatePermission(
 						interaction.getServer().orElseThrow(),
 						args.get(0).getUserValue().orElseThrow(),
 						PermissionSystem.PermissionLevel.values()[args.get(1).getLongValue().orElseThrow().intValue()]);
-				Utils.sendQuickEphemeralResponse(interaction, "Updated permissions!");
+				ResponseUtils.respondInstantlyEphemeral(interaction, "Updated permissions!");
 			}
 			case PLAY -> {
 
@@ -260,62 +258,82 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 				}
 
 				if (queue.isRunning()) {
-					playerManager.loadItem(link, queue);
-					Utils.sendQuickEphemeralResponse(interaction, "Track successfully added to Queue! :D");
+					var future = playerManager.loadItem(link);
+					future.thenAccept(result -> {
+						if (result.isOk()) {
+							queue.enqeue(result.orElseThrow());
+							ResponseUtils.respondLaterPublic(interaction, "Successfully added: " + result);
+						} else {
+							ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading tracks");
+						}
+					}).exceptionally(err -> {
+						ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading tracks");
+						return null;
+					});
 					return;
 				}
 
-				interaction.getUser().getConnectedVoiceChannel(interaction.getServer().get())
+				interaction.getUser().getConnectedVoiceChannel(interaction.getServer().orElseThrow())
 						.ifPresentOrElse(
-								targetVoiceChannel -> {
-									targetVoiceChannel.connect().thenAccept(audioConnection -> {
-										queue.registerAudioDestination(audioConnection);
-										playerManager.loadItem(link, queue);
-									});
+								targetVoiceChannel -> targetVoiceChannel.connect().thenAccept(audioConnection -> {
+									queue.registerAudioDestination(audioConnection);
+									var future = playerManager.loadItem(link);
 
-									Utils.sendQuickEphemeralResponse(interaction, new EmbedBuilder()
-											.setAuthor(interaction.getUser())
-											.addField("Playing: ", link));
-								},
-								() -> {
-									Utils.sendQuickEphemeralResponse(interaction,
-											"You need to be in a Voice-Channel in order to use the /play command");
-								});
+									future.thenAccept(result -> {
+										if (result.isOk()) {
+											queue.enqeue(result.orElseThrow());
+											queue.start();
+											ResponseUtils.respondLaterPublic(interaction,
+													new EmbedBuilder()
+															.setAuthor(interaction.getUser())
+															.addField("Playing: ", queue.getNowPlaying().getInfo().title));
+										} else {
+											ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks");
+										}
+									}).exceptionally(
+											error -> {
+												ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks");
+												return null;
+											});
+								}),
+								() -> ResponseUtils.respondInstantlyEphemeral(interaction,
+										"You need to be in a Voice-Channel in order to use the /play command"));
 			}
 
 			case SKIP -> {
 				if (!queue.isRunning()) {
-					Utils.sendQuickEphemeralResponse(interaction, "The Bot is not playing Music, skip ignored");
+					ResponseUtils.respondInstantlyEphemeral(interaction, "The Bot is not playing Music, skip ignored");
 					return;
 				}
-				Utils.sendQuickEphemeralResponse(interaction, "Skipped Track!");
+				ResponseUtils.respondInstantlyEphemeral(interaction, "Skipped Track!");
 				queue.skip();
 			}
 
 			case PLAYLIST -> {
+				// TODO: Fails with empty queue, add if-check for empty queue
 				var embedBuilder = new EmbedBuilder();
 
 				for (Pair<Integer, AudioTrack> entry : queue) {
 					embedBuilder.addField(String.valueOf(entry.getValue0() + 1), entry.getValue1().getInfo().title, true);
 				}
-				Utils.sendQuickEphemeralResponse(interaction, embedBuilder);
+				ResponseUtils.respondInstantlyEphemeral(interaction, embedBuilder);
 			}
 
 			case STOP -> {
 				queue.clear();
 				api.getYourself().getConnectedVoiceChannel(interaction.getServer().get())
 						.ifPresent(ServerVoiceChannel::disconnect);
-				Utils.sendQuickEphemeralResponse(interaction, "Bot was stopped");
+				ResponseUtils.respondInstantlyEphemeral(interaction, "Bot was stopped");
 			}
 
 			case VOLUME -> {
 				if (!queue.isRunning()) {
-					Utils.sendQuickEphemeralResponse(interaction, "Bot is not currently playing!");
+					ResponseUtils.respondInstantlyEphemeral(interaction, "Bot is not currently playing!");
 					return;
 				}
 				long arg = interaction.getArguments().get(0).getLongValue().get();
 
-				Utils.sendQuickEphemeralResponse(interaction, "Adjusted Volume!");
+				ResponseUtils.respondInstantlyEphemeral(interaction, "Adjusted Volume!");
 				queue.setVolume((int) arg);
 			}
 
@@ -325,19 +343,19 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 				if (args.size() >= 1 && args.get(0).getLongValue().isPresent()) {
 					jumpTarget = args.get(0).getLongValue().get();
 				} else {
-					Utils.sendQuickEphemeralResponse(interaction, "Please only use a number as the target for the /jump command");
+					ResponseUtils.respondInstantlyEphemeral(interaction, "Please only use a number as the target for the /jump command");
 					return;
 				}
 				// Be aware that for easier use and compatibility with /playlist, jump will be 1-indexed
 				if (jumpTarget > queue.getSize()) {
-					Utils.sendQuickEphemeralResponse(interaction, "Please make sure the index provided is in the bounds of the Queue size");
+					ResponseUtils.respondInstantlyEphemeral(interaction, "Please make sure the index provided is in the bounds of the Queue size");
 					return;
 				}
 				queue.skip(jumpTarget - 1);
-				Utils.sendQuickEphemeralResponse(interaction, "Jumped to Track " + jumpTarget + "!");
+				ResponseUtils.respondInstantlyEphemeral(interaction, "Jumped to Track " + jumpTarget + "!");
 			}
 
-			case UNEXPECTED -> Utils.sendQuickEphemeralResponse(interaction, "Something unexpected happened!");
+			case UNEXPECTED -> ResponseUtils.respondInstantlyEphemeral(interaction, "Something unexpected happened!");
 		}
 	}
 }

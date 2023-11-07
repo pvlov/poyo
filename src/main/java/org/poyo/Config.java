@@ -1,4 +1,4 @@
-package org.pvlov;
+package org.poyo;
 
 import org.yaml.snakeyaml.Yaml;
 
@@ -6,7 +6,7 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.pvlov.Bot.LOG;
+import static org.poyo.Bot.LOG;
 
 public class Config {
 
