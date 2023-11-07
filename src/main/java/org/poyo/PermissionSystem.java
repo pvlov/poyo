@@ -22,7 +22,7 @@ public class PermissionSystem {
 		return Stream.of(PermissionLevel.values()).map(v -> SlashCommandOptionChoice.create(v.name(), v.ordinal())).toList();
 	}
 
-	private final Map<String, PermissionLevel> permissionNeeded;
+	private final Map<Utils.SlashCommand, PermissionLevel> permissionNeeded;
 	private final Map<Long, Map<Long, PermissionLevel>> permissionMapping;
 
 	public PermissionSystem() {
@@ -48,11 +48,11 @@ public class PermissionSystem {
 	}
 
 	public void registerCommand(Utils.SlashCommand command, PermissionLevel permissionLevel) {
-		permissionNeeded.put(command.name(), permissionLevel);
+		permissionNeeded.put(command, permissionLevel);
 	}
 
 	public boolean checkPermissions(SlashCommandInteraction interaction) {
-		PermissionLevel neededLevel = permissionNeeded.get(Utils.SlashCommand.fromCommandName(interaction.getFullCommandName()).name());
+		PermissionLevel neededLevel = permissionNeeded.get(Utils.SlashCommand.fromFullCommandName(interaction.getFullCommandName()));
 		if (neededLevel == null) {
 			return true;
 		}
@@ -101,7 +101,7 @@ public class PermissionSystem {
 										.collect(
 												Collectors.toMap(
 														Map.Entry::getKey,
-														u -> u.getValue().toString().toUpperCase())
+														u -> u.getValue().name())
 										)
 						)
 				);

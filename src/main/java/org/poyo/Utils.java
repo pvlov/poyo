@@ -12,7 +12,7 @@ import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberJoinE
 public class Utils {
 	public enum SlashCommand {
 		PING("ping"),
-		PERMISSION_SET("permission_set"),
+		PERMISSION_SET("permission", "set"),
 		PLAY("play"),
 		PLAYLIST("playlist"),
 		SKIP("skip"),
@@ -22,13 +22,26 @@ public class Utils {
 		UNEXPECTED(null);
 
 		public final String commandName;
+		public final String[] subCommands;
+		public final String fullCommandName;
 
-		SlashCommand(String commandName) {
+		SlashCommand(String commandName, String... subCommands) {
 			this.commandName = commandName;
+			this.subCommands = subCommands;
+
+			if (commandName == null) {
+				this.fullCommandName = null;
+				return;
+			}
+			StringBuilder sb = new StringBuilder(commandName);
+			for (String sub : subCommands) {
+				sb.append(" ").append(sub);
+			}
+			fullCommandName = sb.toString();
 		}
 
-		public static SlashCommand fromCommandName(String commandName) {
-			return Stream.of(values()).filter(v -> commandName.equals(v.commandName)).findAny().orElse(UNEXPECTED);
+		public static SlashCommand fromFullCommandName(String fullCommandName) {
+			return Stream.of(values()).filter(v -> fullCommandName.equals(v.fullCommandName)).findAny().orElse(UNEXPECTED);
 		}
 	}
 

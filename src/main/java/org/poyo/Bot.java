@@ -83,7 +83,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
 			for (ServerVoiceChannel channel : server.getVoiceChannels()) {
 				if (channel.getConnectedUsers().stream().anyMatch(user -> this.VIPs.contains(user.getId()))) {
-					LOG.info("VIP found. Joing voice channel...");
+					LOG.info("VIP found. Joining voice channel...");
 
 					// Any VIP will do.
 					Utils.simulateJoinEvent(this, channel, this.VIPs.get(0));
@@ -107,19 +107,24 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 				.setEnabledInDms(false)
 				.setName(PERMISSION_SET.commandName)
 				.addOption(new SlashCommandOptionBuilder()
-						.setType(SlashCommandOptionType.USER)
-						.setName("user")
-						.setRequired(true)
-						.setDescription("User whose permission level will be modified.")
+						.setType(SlashCommandOptionType.SUB_COMMAND)
+						.setName(PERMISSION_SET.subCommands[0])
+						.setDescription("Sets the permission level of a user.")
+						.addOption(new SlashCommandOptionBuilder()
+								.setType(SlashCommandOptionType.USER)
+								.setName("user")
+								.setRequired(true)
+								.setDescription("User whose permission level will be modified.")
+								.build())
+						.addOption(new SlashCommandOptionBuilder()
+								.setType(SlashCommandOptionType.LONG)
+								.setName("level")
+								.setRequired(true)
+								.setChoices(PermissionSystem.getSlashCommandOptionChoices())
+								.setDescription("Permission level to give to the user.")
+								.build())
 						.build())
-				.addOption(new SlashCommandOptionBuilder()
-						.setType(SlashCommandOptionType.LONG)
-						.setName("level")
-						.setRequired(true)
-						.setChoices(PermissionSystem.getSlashCommandOptionChoices())
-						.setDescription("Permission level to give to the user.")
-						.build())
-				.setDescription("Sets the permission level of a user."));
+				.setDescription("test"));
 		permissionSystem.registerCommand(PERMISSION_SET, ALL);
 
 		builders.add(new SlashCommandBuilder()
@@ -236,7 +241,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
 		var args = interaction.getArguments();
 
-		switch (Utils.SlashCommand.fromCommandName(interaction.getCommandName())) {
+		switch (Utils.SlashCommand.fromFullCommandName(interaction.getFullCommandName())) {
 			case PING -> {
 				ResponseUtils.respondInstantlyEphemeral(interaction, "Pong!");
 			}
