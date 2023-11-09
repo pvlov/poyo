@@ -24,11 +24,14 @@ import org.javatuples.Pair;
 import org.poyo.audio.AudioQueue;
 import org.poyo.audio.CustomAudioPlayerManager;
 import org.poyo.util.ResponseUtils;
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.inspector.TagInspector;
+import org.yaml.snakeyaml.introspector.BeanAccess;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.*;
+import java.util.*;
 
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
         SlashCommandCreateListener {
@@ -45,11 +48,15 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     // TODO: Multiple connections at once
     private AudioConnection currConnection;
 
-    public Bot() {
-        this.api = new DiscordApiBuilder().setToken(Config.INSTANCE.getEntry("DISCORD_TOKEN", String.class).orElseGet(() -> {
-            LOG.error("No DISCORD_TOKEN set. Abort.");
-            return null;
-        })).login().join();
+    private final Config config;
+
+    public Bot()  {
+
+        this.config = readConfigFile();
+        this.api = new DiscordApiBuilder()
+                .setToken(config.getToken())
+                .login()
+                .join();
 
         this.playerManager = new CustomAudioPlayerManager();
         this.queue = AudioQueue.buildQueue(this.playerManager, api);
@@ -61,17 +68,55 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         api.addServerVoiceChannelMemberLeaveListener(this);
         api.addSlashCommandCreateListener(this);
 
-        this.audioCache.store(Config.INSTANCE.getListEntry("VIP_TRACKS", String.class).orElseGet(() -> {
+        var VIPTracks = config.getAllVIPTrackLinks();
+
+        if (VIPTracks.isEmpty()) {
             LOG.warn("No VIP tracks set.");
-            return new ArrayList<>();
-        }));
+        }
+        this.audioCache.store(VIPTracks);
 
-        this.VIPs.addAll(Config.INSTANCE.getListEntry("VIPS", Long.class).orElseGet(() -> {
+        var VIPIDs = config.getAllVIPIDs();
+        if (VIPIDs.isEmpty()) {
             LOG.warn("No VIP's set.");
-            return new ArrayList<>();
-        }));
-
+        }
+        this.VIPs.addAll(VIPIDs);
         startupCheck();
+    }
+
+    private Config readConfigFile()  {
+        final String configFilePath = getWorkingDir() + "config.yaml";
+        File configFile = new File(configFilePath);
+
+        try (FileReader fileReader = new FileReader(configFile)) {
+            var options = new LoaderOptions();
+            TagInspector tagInspector = tag -> tag.getClassName().equals(Config.class.getName());
+            options.setTagInspector(tagInspector);
+
+            Yaml yaml = new Yaml(options);
+            yaml.setBeanAccess(BeanAccess.FIELD);
+
+            return yaml.loadAs(fileReader, Config.class);
+
+        } catch (IOException ignored) {
+            LOG.error("Could not find config.yaml at " + configFilePath);
+            LOG.info("Creating template config.yaml at " + configFilePath);
+
+            Config template = Config.createTemplate();
+
+            DumperOptions options = new DumperOptions();
+            options.setExplicitStart(false);
+
+            Yaml yaml = new Yaml();
+            yaml.setBeanAccess(BeanAccess.FIELD);
+            try (Writer writer = new FileWriter(configFilePath)) {
+                yaml.dump(template, writer);
+            } catch (IOException lol) {
+                LOG.error("Could not write Template config.yaml to " + configFilePath);
+            }
+            LOG.info("Please fill out the field 'DISCORD_TOKEN' in the config.yaml at " + configFilePath);
+            System.exit(0);
+            return null;
+        }
     }
 
     private void startupCheck() {
@@ -150,13 +195,13 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                 LOG.warn("The VIP cache is empty. You can add tracks via the config file.");
                 return;
             }
-            // This shouldnt just play anything but the actual Playlist for the VIP
-            //queue.playNowAll(this.audioCache.iter());
-            api.getYourself().updateNickname(audioConnection.getServer(),
-                    Config.INSTANCE.getEntry("PLAY_NICKNAME", String.class).orElse(BOT_NAME));
-        }).exceptionally(throwable -> {
-            throwable.printStackTrace();
-            return null;
+            long VIP_ID = event.getUser().getId();
+            var audioTracks = audioCache.retrieve(config.getVIPTrackLink(VIP_ID));
+
+            audioTracks.ifPresent(tracks -> {
+                api.getYourself().updateNickname(audioConnection.getServer(), config.getNickname());
+                queue.playNowAll(audioTracks.orElseThrow());
+            });
         });
     }
 
@@ -295,5 +340,12 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
             case UNEXPECTED -> ResponseUtils.respondInstantlyEphemeral(interaction, "Something unexpected happened!");
         }
+    }
+
+    private String getWorkingDir() {
+        String folder = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+        folder = folder.replace("\\", "/");
+        folder = folder.substring(0, folder.lastIndexOf("/") + 1);
+        return folder;
     }
 }

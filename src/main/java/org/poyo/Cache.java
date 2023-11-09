@@ -1,8 +1,6 @@
 package org.poyo;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import com.sedmelluq.discord.lavaplayer.track.AudioReference;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
@@ -11,8 +9,8 @@ import org.poyo.audio.CustomAudioPlayerManager;
 
 public class Cache {
 
-    private HashMap<String, List<AudioTrack>> cache;
-    private CustomAudioPlayerManager playerManager;
+    private final HashMap<String, List<AudioTrack>> cache;
+    private final CustomAudioPlayerManager playerManager;
 
     public Cache(CustomAudioPlayerManager playerManager) {
         this.cache = new HashMap<>();
@@ -30,44 +28,26 @@ public class Cache {
         return cache.values();
     }
 
-    public boolean store(String link) {
-        if (!cache.containsKey(link)) {
-            var result = playerManager.loadItemSync(new AudioReference(link, null));
-            if (result.isOk()) {
-                try {
-                    cache.put(link, result.orElseThrow());
-                } catch (AudioLoadError e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            return true;
+    public void store(String link) {
+        if (cache.containsKey(link)) {
+            return;
         }
-        return false;
+        var result = playerManager.loadItemSync(new AudioReference(link, null));
+        if (result.isOk()) {
+            cache.put(link, result.orElseThrow());
+        } else {
+            Bot.LOG.warn("Could not load VIP-Track with the identifier: " + link);
+        }
     }
 
-    public boolean store(List<String> links) {
-        if (links == null)
-            return true;
-
-        boolean success = true;
-        for (String link : links) {
-            if (!store(link)) {
-                success = false;
-            }
-        }
-        return success;
+    public void store(Collection<String> links) {
+       for(var link : links) {
+           store(link);
+       }
     }
 
     public boolean empty() {
         return this.cache.isEmpty();
-    }
-
-    public boolean free(String link) {
-        if (cache.containsKey(link)) {
-            cache.remove(link);
-            return true;
-        }
-        return false;
     }
 
 }
