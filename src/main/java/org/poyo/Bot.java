@@ -24,14 +24,16 @@ import org.javatuples.Pair;
 import org.poyo.audio.AudioQueue;
 import org.poyo.audio.CustomAudioPlayerManager;
 import org.poyo.util.ResponseUtils;
-import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.inspector.TagInspector;
 import org.yaml.snakeyaml.introspector.BeanAccess;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
         SlashCommandCreateListener {
@@ -44,13 +46,12 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     private final AudioQueue queue;
     private final Cache audioCache;
     private final List<Long> VIPs;
+    private final Config config;
     public DiscordApi api;
     // TODO: Multiple connections at once
     private AudioConnection currConnection;
 
-    private final Config config;
-
-    public Bot()  {
+    public Bot() {
 
         this.config = readConfigFile();
         this.api = new DiscordApiBuilder()
@@ -83,7 +84,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         startupCheck();
     }
 
-    private Config readConfigFile()  {
+    private Config readConfigFile() {
         final String configFilePath = getWorkingDir() + "config.yaml";
         File configFile = new File(configFilePath);
 
@@ -102,9 +103,6 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             LOG.info("Creating template config.yaml at " + configFilePath);
 
             Config template = Config.createTemplate();
-
-            DumperOptions options = new DumperOptions();
-            options.setExplicitStart(false);
 
             Yaml yaml = new Yaml();
             yaml.setBeanAccess(BeanAccess.FIELD);
@@ -226,8 +224,14 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     public void onSlashCommandCreate(SlashCommandCreateEvent event) {
         SlashCommandInteraction interaction = event.getSlashCommandInteraction();
         var args = interaction.getArguments();
+        String commandName = interaction.getCommandName();
 
-        switch (Utils.parseCommandName(interaction.getCommandName())) {
+        if (config.isBlackListed(interaction.getUser().getId(), commandName)) {
+            ResponseUtils.respondInstantlyEphemeral(interaction, "You are not allowed to use the command: " + commandName);
+            return;
+        }
+
+        switch (Utils.parseCommandName(commandName)) {
             case PING -> ResponseUtils.respondInstantlyEphemeral(interaction, "Pong!");
 
             case PLAY -> {
@@ -304,7 +308,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
             case STOP -> {
                 queue.clear();
-                api.getYourself().getConnectedVoiceChannel(interaction.getServer().get())
+                api.getYourself().getConnectedVoiceChannel(interaction.getServer().orElseThrow())
                         .ifPresent(ServerVoiceChannel::disconnect);
                 ResponseUtils.respondInstantlyEphemeral(interaction, "Bot was stopped");
             }
@@ -314,7 +318,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                     ResponseUtils.respondInstantlyEphemeral(interaction, "Bot is not currently playing!");
                     return;
                 }
-                long arg = interaction.getArguments().get(0).getLongValue().get();
+                long arg = interaction.getArguments().get(0).getLongValue().orElseThrow();
 
                 ResponseUtils.respondInstantlyEphemeral(interaction, "Adjusted Volume!");
                 queue.setVolume((int) arg);
