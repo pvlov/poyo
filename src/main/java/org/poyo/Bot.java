@@ -24,7 +24,6 @@ import org.javatuples.Pair;
 import org.poyo.audio.AudioQueue;
 import org.poyo.audio.CustomAudioPlayerManager;
 import org.poyo.util.ResponseUtils;
-import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.inspector.TagInspector;
@@ -104,9 +103,6 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
             LOG.info("Creating template config.yaml at " + configFilePath);
 
             Config template = Config.createTemplate();
-
-            DumperOptions options = new DumperOptions();
-            options.setExplicitStart(false);
 
             Yaml yaml = new Yaml();
             yaml.setBeanAccess(BeanAccess.FIELD);
@@ -231,7 +227,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         String commandName = interaction.getCommandName();
 
         if (config.isBlackListed(interaction.getUser().getId(), commandName)) {
-            ResponseUtils.respondInstantlyEphemeral(interaction, "You are not allowed to use " + commandName);
+            ResponseUtils.respondInstantlyEphemeral(interaction, "You are not allowed to use the command: " + commandName);
             return;
         }
 
@@ -312,7 +308,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
 
             case STOP -> {
                 queue.clear();
-                api.getYourself().getConnectedVoiceChannel(interaction.getServer().get())
+                api.getYourself().getConnectedVoiceChannel(interaction.getServer().orElseThrow())
                         .ifPresent(ServerVoiceChannel::disconnect);
                 ResponseUtils.respondInstantlyEphemeral(interaction, "Bot was stopped");
             }
@@ -322,7 +318,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
                     ResponseUtils.respondInstantlyEphemeral(interaction, "Bot is not currently playing!");
                     return;
                 }
-                long arg = interaction.getArguments().get(0).getLongValue().get();
+                long arg = interaction.getArguments().get(0).getLongValue().orElseThrow();
 
                 ResponseUtils.respondInstantlyEphemeral(interaction, "Adjusted Volume!");
                 queue.setVolume((int) arg);
@@ -355,9 +351,5 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         folder = folder.replace("\\", "/");
         folder = folder.substring(0, folder.lastIndexOf("/") + 1);
         return folder;
-    }
-
-    public AudioQueue getQueue() {
-        return queue;
     }
 }
