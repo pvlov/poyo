@@ -31,7 +31,10 @@ import org.yaml.snakeyaml.inspector.TagInspector;
 import org.yaml.snakeyaml.introspector.BeanAccess;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
         SlashCommandCreateListener {
@@ -44,13 +47,12 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     private final AudioQueue queue;
     private final Cache audioCache;
     private final List<Long> VIPs;
+    private final Config config;
     public DiscordApi api;
     // TODO: Multiple connections at once
     private AudioConnection currConnection;
 
-    private final Config config;
-
-    public Bot()  {
+    public Bot() {
 
         this.config = readConfigFile();
         this.api = new DiscordApiBuilder()
@@ -83,7 +85,7 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         startupCheck();
     }
 
-    private Config readConfigFile()  {
+    private Config readConfigFile() {
         final String configFilePath = getWorkingDir() + "config.yaml";
         File configFile = new File(configFilePath);
 
@@ -226,8 +228,14 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
     public void onSlashCommandCreate(SlashCommandCreateEvent event) {
         SlashCommandInteraction interaction = event.getSlashCommandInteraction();
         var args = interaction.getArguments();
+        String commandName = interaction.getCommandName();
 
-        switch (Utils.parseCommandName(interaction.getCommandName())) {
+        if (config.isBlackListed(interaction.getUser().getId(), commandName)) {
+            ResponseUtils.respondInstantlyEphemeral(interaction, "You are not allowed to use " + commandName);
+            return;
+        }
+
+        switch (Utils.parseCommandName(commandName)) {
             case PING -> ResponseUtils.respondInstantlyEphemeral(interaction, "Pong!");
 
             case PLAY -> {
@@ -347,5 +355,9 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         folder = folder.replace("\\", "/");
         folder = folder.substring(0, folder.lastIndexOf("/") + 1);
         return folder;
+    }
+
+    public AudioQueue getQueue() {
+        return queue;
     }
 }
