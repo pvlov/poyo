@@ -10,27 +10,6 @@ import org.javacord.api.event.channel.server.voice.ServerVoiceChannelMemberJoinE
 
 public class Utils {
 
-    public enum SlashCommand {
-        PING,
-        PLAY,
-        PLAYLIST,
-        SKIP,
-        STOP,
-        VOLUME,
-
-        JUMP,
-
-        UNEXPECTED,
-    }
-
-    public static SlashCommand parseCommandName(String commandName) {
-        try {
-            return SlashCommand.valueOf(commandName.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-        }
-        return SlashCommand.UNEXPECTED;
-    }
     public static void simulateJoinEvent(Bot bot, ServerVoiceChannel channel, long userID) {
         bot.onServerVoiceChannelMemberJoin(new ServerVoiceChannelMemberJoinEvent() {
 

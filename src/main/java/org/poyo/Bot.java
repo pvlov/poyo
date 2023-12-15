@@ -35,17 +35,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener,
-        SlashCommandCreateListener {
+public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceChannelMemberLeaveListener {
 
     public static final Logger LOG = LogManager.getLogger();
-
     private static final String BOT_NAME = "Poyo";
-    private static final String NEVER_GONNA_GIVE_YOU_UP = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
     private final CustomAudioPlayerManager playerManager;
     private final AudioQueue queue;
     private final Cache audioCache;
     private final List<Long> VIPs;
+    private final SlashCommandHandler slashCommandHandler;
     private final Config config;
     public DiscordApi api;
     // TODO: Multiple connections at once
@@ -63,11 +61,12 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         this.queue = AudioQueue.buildQueue(this.playerManager, api);
         this.audioCache = new Cache(playerManager);
         this.VIPs = new ArrayList<>();
+        this.slashCommandHandler = new SlashCommandHandler(this);
 
         createSlashCommands();
         api.addServerVoiceChannelMemberJoinListener(this);
         api.addServerVoiceChannelMemberLeaveListener(this);
-        api.addSlashCommandCreateListener(this);
+        api.addSlashCommandCreateListener(slashCommandHandler);
 
         var VIPTracks = config.getAllVIPTrackLinks();
 
@@ -220,136 +219,23 @@ public class Bot implements ServerVoiceChannelMemberJoinListener, ServerVoiceCha
         }
     }
 
-    @Override
-    public void onSlashCommandCreate(SlashCommandCreateEvent event) {
-        SlashCommandInteraction interaction = event.getSlashCommandInteraction();
-        var args = interaction.getArguments();
-        String commandName = interaction.getCommandName();
-
-        if (config.isBlackListed(interaction.getUser().getId(), commandName)) {
-            ResponseUtils.respondInstantlyEphemeral(interaction, "You are not allowed to use the command: " + commandName);
-            return;
-        }
-
-        switch (Utils.parseCommandName(commandName)) {
-            case PING -> ResponseUtils.respondInstantlyEphemeral(interaction, "Pong!");
-
-            case PLAY -> {
-
-                final String link;
-
-                if (args.size() >= 1 && args.get(0).getStringValue().isPresent()) {
-                    link = args.get(0).getStringValue().get();
-                } else {
-                    link = NEVER_GONNA_GIVE_YOU_UP;
-                }
-
-                if (queue.isRunning()) {
-                    var future = playerManager.loadItem(link);
-                    future.thenAccept(result -> {
-                        if (result.isOk()) {
-                            queue.enqeue(result.orElseThrow());
-                            ResponseUtils.respondLaterPublic(interaction, "Successfully added: " + result);
-                        } else {
-                            ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading tracks");
-                        }
-                    }).exceptionally(err -> {
-                        ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading tracks");
-                        return null;
-                    });
-                    return;
-                }
-
-                interaction.getUser().getConnectedVoiceChannel(interaction.getServer().orElseThrow())
-                        .ifPresentOrElse(
-                                targetVoiceChannel -> targetVoiceChannel.connect().thenAccept(audioConnection -> {
-                                    queue.registerAudioDestination(audioConnection);
-                                    var future = playerManager.loadItem(link);
-
-                                    future.thenAccept(result -> {
-                                        if (result.isOk()) {
-                                            queue.enqeue(result.orElseThrow());
-                                            queue.start();
-                                            ResponseUtils.respondLaterPublic(interaction,
-                                                    new EmbedBuilder()
-                                                            .setAuthor(interaction.getUser())
-                                                            .addField("Playing: ", queue.getNowPlaying().getInfo().title));
-                                        } else {
-                                            ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks");
-                                        }
-                                    }).exceptionally(
-                                            error -> {
-                                                ResponseUtils.respondLaterEphemeral(interaction, "Something went wrong while loading Tracks");
-                                                return null;
-                                            });
-                                }),
-                                () -> ResponseUtils.respondInstantlyEphemeral(interaction,
-                                        "You need to be in a Voice-Channel in order to use the /play command"));
-            }
-
-            case SKIP -> {
-                if (!queue.isRunning()) {
-                    ResponseUtils.respondInstantlyEphemeral(interaction, "The Bot is not playing Music, skip ignored");
-                    return;
-                }
-                ResponseUtils.respondInstantlyEphemeral(interaction, "Skipped Track!");
-                queue.skip();
-            }
-
-            case PLAYLIST -> {
-                // TODO: Fails with empty queue, add if-check for empty queue
-                var embedBuilder = new EmbedBuilder();
-
-                for (Pair<Integer, AudioTrack> entry : queue) {
-                    embedBuilder.addField(String.valueOf(entry.getValue0() + 1), entry.getValue1().getInfo().title, true);
-                }
-                ResponseUtils.respondInstantlyEphemeral(interaction, embedBuilder);
-            }
-
-            case STOP -> {
-                queue.clear();
-                api.getYourself().getConnectedVoiceChannel(interaction.getServer().orElseThrow())
-                        .ifPresent(ServerVoiceChannel::disconnect);
-                ResponseUtils.respondInstantlyEphemeral(interaction, "Bot was stopped");
-            }
-
-            case VOLUME -> {
-                if (!queue.isRunning()) {
-                    ResponseUtils.respondInstantlyEphemeral(interaction, "Bot is not currently playing!");
-                    return;
-                }
-                long arg = interaction.getArguments().get(0).getLongValue().orElseThrow();
-
-                ResponseUtils.respondInstantlyEphemeral(interaction, "Adjusted Volume!");
-                queue.setVolume((int) arg);
-            }
-
-            case JUMP -> {
-
-                final long jumpTarget;
-                if (args.size() >= 1 && args.get(0).getLongValue().isPresent()) {
-                    jumpTarget = args.get(0).getLongValue().get();
-                } else {
-                    ResponseUtils.respondInstantlyEphemeral(interaction, "Please only use a number as the target for the /jump command");
-                    return;
-                }
-                // Be aware that for easier use and compatibility with /playlist, jump will be 1-indexed
-                if (jumpTarget > queue.getSize()) {
-                    ResponseUtils.respondInstantlyEphemeral(interaction, "Please make sure the index provided is in the bounds of the Queue size");
-                    return;
-                }
-                queue.skip(jumpTarget - 1);
-                ResponseUtils.respondInstantlyEphemeral(interaction, "Jumped to Track " + jumpTarget + "!");
-            }
-
-            case UNEXPECTED -> ResponseUtils.respondInstantlyEphemeral(interaction, "Something unexpected happened!");
-        }
-    }
-
     private String getWorkingDir() {
         String folder = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
         folder = folder.replace("\\", "/");
         folder = folder.substring(0, folder.lastIndexOf("/") + 1);
         return folder;
+    }
+
+    public Config getConfig() {
+        return this.config;
+    }
+    public AudioQueue getAudioQueue() {
+        return this.queue;
+    }
+    public DiscordApi getApi() {
+        return this.api;
+    }
+    public CustomAudioPlayerManager getPlayerManager() {
+        return this.playerManager;
     }
 }
